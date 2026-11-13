@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
-    "lighthouse": "lhci autorun"
+    "lighthouse": "pnpm build && LH_PRESET=mobile lhci autorun && LH_PRESET=desktop lhci autorun"
   },
   "msw": {
     "workerDirectory": [
