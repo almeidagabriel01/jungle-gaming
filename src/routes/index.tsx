@@ -41,6 +41,12 @@ function CatalogPage() {
     [navigate],
   )
 
+  // Página além do fim (link antigo ou filtro que encolheu o resultado): vai para a última.
+  const lastPage = list.data && list.data.items.length === 0 && list.data.total > 0 ? list.data.totalPages : null
+  useEffect(() => {
+    if (lastPage) void navigate({ search: (prev) => ({ ...prev, page: lastPage }), replace: true })
+  }, [lastPage, navigate])
+
   return (
     <div className="grid gap-8">
       <Featured />
@@ -60,7 +66,7 @@ function CatalogPage() {
           <GridSkeleton />
         ) : list.isError ? (
           <QueryError error={list.error} onRetry={() => void list.refetch()} title="Não foi possível carregar o catálogo" />
-        ) : list.data.items.length === 0 ? (
+        ) : list.data.total === 0 ? (
           <div className="grid justify-items-start gap-3 rounded-lg border p-6">
             <p>Nenhum NFT encontrado com esses filtros.</p>
             <Button variant="outline" onClick={() => void navigate({ search: NFT_SEARCH_DEFAULTS })}>
