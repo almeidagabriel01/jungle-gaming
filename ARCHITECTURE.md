@@ -96,21 +96,24 @@ Limitações do transporte simulado:
 - **Dedupe e ordem:** `eventId` já visto é ignorado; `version` menor ou igual à última aplicada ao recurso
   também. Duplicatas e eventos antigos não regridem estado nem repetem avisos.
 - **Aplicação:** `nft.updated` atualiza o cache do detalhe, das listas e dos destaques só se a versão do
-  evento for maior que a do dado em cache. Se o NFT está no carrinho, avisa o que mudou (`aria-live`) e
-  invalida carrinho e cotação, que voltam a vir da API.
+  evento for maior que a do dado em cache. As listas e os favoritos também são invalidados, porque filtro
+  e ordenação por preço/disponibilidade só o servidor recalcula. Se o NFT está no carrinho, avisa o que
+  mudou (`aria-live`) e invalida carrinho e cotação, que voltam a vir da API.
 - **Pedidos:** `order.updated` só é aplicado se `payload.userId` é o usuário atual; o pedido é recarregado da
   API para trazer o recibo completo. Enquanto pendente, o pedido também é consultado a cada 5 s (fallback).
 - **Reconexão:** ao reconectar, catálogo, carrinho, cotação e pedidos do usuário são invalidados.
-- **Sessão:** um socket por sessão; trocar de usuário remove listeners e desconecta o socket anterior, e
-  eventos que ainda chegarem por ele são descartados.
+- **Sessão:** o servidor identifica o usuário no handshake, então cada token novo (login, logout, troca de
+  usuário, refresh) recria o socket: listeners do anterior são removidos, eventos que ainda chegarem por ele
+  são descartados e o novo socket reconcilia ao conectar.
 
 ## Sessão
 
 - Access token de 15 min e refresh token de 7 dias (simulados), guardados em localStorage — recuperáveis
   após refresh. Senhas no mock DB só como SHA-256 com salt por usuário.
 - 401 em request autenticada dispara **um único** `POST /auth/refresh` compartilhado e repete a request.
-  Refresh falho = sessão expirada: em rota privada leva ao login com `redirect` (caminho interno validado)
-  e motivo; em rota pública mantém o visitante e avisa.
+  Refresh recusado (400/401) = sessão expirada: em rota privada leva ao login com `redirect` (caminho
+  interno validado) e motivo; em rota pública mantém o visitante e avisa. Falha de rede/5xx no refresh não
+  desloga (devolve o erro original), e um refresh que termina depois de logout ou troca de conta é descartado.
 - Login, logout, expiração e troca de usuário em outra aba passam pelo mesmo caminho: o store emite a troca,
   o cache privado (`['me']`, `['cart']`, `['quote']`) é removido, avisos limpos, rotas reavaliadas e o socket
   recriado.
@@ -120,7 +123,8 @@ Limitações do transporte simulado:
 
 - Visitante tem carrinho próprio (`X-Guest-Id`). No login/cadastro o carrinho do visitante é mesclado ao do
   usuário (soma de quantidades limitada à disponibilidade). No logout o visitante recomeça vazio.
-- Toda mutação devolve o carrinho completo, gravado no cache; a cotação é invalidada em seguida.
+- Toda mutação devolve o carrinho completo, gravado no cache; a cotação é invalidada em seguida. As
+  mutações rodam em série (`scope`), então uma resposta antiga nunca sobrescreve uma mais nova.
 - Disponibilidade é validada no servidor (409 com a quantidade disponível); a UI limita a quantidade ao
   disponível menos o que já está no carrinho.
 
@@ -134,7 +138,8 @@ Limitações do transporte simulado:
    `QUOTE_STALE` com a nova cotação, que exige nova confirmação.
 4. A tentativa (`Idempotency-Key` + corpo) é gravada antes do envio. Clique repetido, timeout, queda ou
    refresh reenviam exatamente a mesma tentativa, e o servidor devolve o mesmo pedido. A tentativa só é
-   descartada com resposta definitiva (pedido ou 4xx que não seja 401).
+   descartada com resposta definitiva (pedido ou 4xx que não seja 401). Enquanto existir, a confirmação fica
+   bloqueada e só "Reenviar pedido" envia: uma nova cotação geraria outra chave e outro pedido.
 5. Pedido nasce `pending` com estoque reservado; termina `confirmed` (remove do carrinho só o que foi
    comprado) ou `declined` (devolve o estoque, carrinho intacto). Estados terminais não mudam. A liquidação é
    persistida (`settleAt`), então refresh e queda não deixam pedido pendente para sempre.
