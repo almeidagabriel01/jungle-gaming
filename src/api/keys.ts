@@ -13,7 +13,6 @@ export const keys = {
   cart: (owner: string) => ['cart', owner] as const,
   quoteAll: ['quote'] as const,
   quote: (owner: string, couponCode: string | undefined, network: Network) => ['quote', owner, couponCode ?? '', network] as const,
-  me: (userId: string) => ['me', userId] as const,
   favorites: (userId: string) => ['me', userId, 'favorites'] as const,
   profile: (userId: string) => ['me', userId, 'profile'] as const,
   wallets: (userId: string) => ['me', userId, 'wallets'] as const,
