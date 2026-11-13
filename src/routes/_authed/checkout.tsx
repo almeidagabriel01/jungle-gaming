@@ -142,7 +142,6 @@ function DetailsStep({
   const [errors, setErrors] = useState<FieldErrors>({})
   const formRef = useRef<HTMLFormElement>(null)
   const network = draft.network ?? 'ethereum'
-  const isConnected = connection.state === 'connected' && connection.walletId === draft.walletId && connection.network === network
 
   if (wallets.isPending) return <Skeleton className="h-64 w-full" />
   if (wallets.isError) return <QueryError error={wallets.error} onRetry={() => void wallets.refetch()} />
@@ -157,6 +156,7 @@ function DetailsStep({
     )
   }
   const walletId = draft.walletId ?? wallets.data.items[0]!.id
+  const isConnected = connection.state === 'connected' && connection.walletId === walletId && connection.network === network
 
   return (
     <form
