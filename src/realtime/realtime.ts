@@ -65,6 +65,10 @@ function applyNftUpdated(qc: QueryClient, event: NftUpdatedEvent) {
   qc.setQueryData<Nft>(keys.nft(event.payload.nftId), (nft) => nft && patchNft(nft, event))
   qc.setQueriesData<NftList>({ queryKey: [...keys.nfts, 'list'] }, (list) => list && { ...list, items: list.items.map((n) => patchNft(n, event)) })
   qc.setQueryData<{ items: Nft[] }>(keys.nftFeatured, (data) => data && { items: data.items.map((n) => patchNft(n, event)) })
+  // O patch é imediato; filtro e ordenação (preço, disponibilidade) só o servidor recalcula.
+  void qc.invalidateQueries({ queryKey: [...keys.nfts, 'list'] })
+  const userId = sessionStore.userId()
+  if (userId) void qc.invalidateQueries({ queryKey: keys.favorites(userId) })
 
   // Item no carrinho: avisa o que mudou e recalcula resumo/cotação pela API.
   const cart = qc.getQueryData<Cart>(keys.cart(ownerKey()))
@@ -115,20 +119,18 @@ function reconcile(qc: QueryClient) {
   if (userId) void qc.invalidateQueries({ queryKey: keys.orders(userId) })
 }
 
-function connect(qc: QueryClient): Socket {
-  const tokenQuery = () => {
-    const token = sessionStore.get()?.tokens.accessToken
-    return token ? { token } : {}
-  }
+/** `resumed`: substitui um socket anterior; eventos perdidos na troca são reconciliados na conexão. */
+function connect(qc: QueryClient, resumed = false): Socket {
+  const token = sessionStore.get()?.tokens.accessToken
   const socket = io({
     path: '/socket.io',
     transports: ['websocket'],
-    query: tokenQuery(),
+    query: token ? { token } : {},
     reconnectionDelay: 500,
     reconnectionDelayMax: 4_000,
   })
   const sessionUser = sessionStore.userId()
-  let wasConnected = false
+  let wasConnected = resumed
 
   const onEvent = (raw: unknown) => {
     const parsed = RealtimeEvent.safeParse(raw)
@@ -149,11 +151,7 @@ function connect(qc: QueryClient): Socket {
   socket.on('disconnect', () => {
     setStatus('disconnected')
   })
-  // Token renovado entre tentativas: reconecta com a credencial atual.
-  socket.io.on('reconnect_attempt', () => {
-    socket.io.opts.query = tokenQuery()
-    setStatus('connecting')
-  })
+  socket.io.on('reconnect_attempt', () => setStatus('connecting'))
   setStatus('connecting')
   return socket
 }
@@ -162,11 +160,12 @@ function connect(qc: QueryClient): Socket {
 export function startRealtime(qc: QueryClient): () => void {
   let socket = connect(qc)
   const unsubscribe = sessionStore.subscribe((next, prev) => {
-    if (next?.user.id === prev?.user.id) return
+    // O servidor resolve o usuário no handshake: token novo (login, troca, refresh) exige nova conexão.
+    if (next?.tokens.accessToken === prev?.tokens.accessToken) return
     socket.removeAllListeners()
     socket.io.removeAllListeners()
     socket.disconnect()
-    socket = connect(qc)
+    socket = connect(qc, true)
   })
   return () => {
     unsubscribe()
