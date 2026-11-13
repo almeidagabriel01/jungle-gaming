@@ -20,6 +20,7 @@ function useCartMutation<V>(fn: (vars: V) => Promise<Cart>) {
   const qc = useQueryClient()
   const owner = useCartOwner()
   return useMutation({
+    scope: { id: 'cart' },
     mutationFn: fn,
     onSuccess: (cart) => {
       qc.setQueryData(keys.cart(owner), cart)
