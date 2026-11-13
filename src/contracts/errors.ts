@@ -18,6 +18,8 @@ export const ErrorCode = z.enum([
   'QUOTE_NOT_PURCHASABLE',
   'IDEMPOTENCY_CONFLICT',
   'WALLET_LIMIT',
+  'WALLET_REJECTED',
+  'WALLET_NOT_CONNECTED',
   'SERVICE_UNAVAILABLE',
 ])
 export type ErrorCode = z.infer<typeof ErrorCode>

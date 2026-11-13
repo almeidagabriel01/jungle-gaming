@@ -50,6 +50,7 @@ export const QuoteLine = z.object({
 export type QuoteLine = z.infer<typeof QuoteLine>
 
 export const Coupon = z.object({ code: z.string(), percentOff: z.int().min(1).max(100) })
+export type Coupon = z.infer<typeof Coupon>
 
 export const QuoteRequest = z.object({
   couponCode: z.string().trim().toUpperCase().max(32).optional(),

@@ -91,3 +91,12 @@ export const WalletBody = z.object({
   role: WalletRole,
 })
 export type WalletBody = z.infer<typeof WalletBody>
+
+export const WalletConnectBody = z.object({ network: Network })
+
+export const WalletConnection = z.object({ walletId: Id, network: Network, connectedAt: IsoDate })
+export type WalletConnection = z.infer<typeof WalletConnection>
+
+export const SessionResponse = z.object({ user: User })
+
+export const WalletList = z.object({ items: z.array(Wallet) })

@@ -72,3 +72,6 @@ export const NftList = paginated(Nft).extend({
   collections: z.array(z.object({ id: Id, name: z.string() })),
 })
 export type NftList = z.infer<typeof NftList>
+
+export const Favorites = z.object({ items: z.array(Nft) })
+export type Favorites = z.infer<typeof Favorites>

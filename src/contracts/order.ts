@@ -45,3 +45,5 @@ export const Order = z.object({
 export type Order = z.infer<typeof Order>
 
 export const isTerminal = (status: OrderStatus) => status !== 'pending'
+
+export const OrderList = z.object({ items: z.array(Order) })
