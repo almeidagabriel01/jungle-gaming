@@ -44,7 +44,7 @@ function Header() {
     <header className="border-b">
       <nav aria-label="Principal" className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
         <Link to="/" className="font-semibold">
-          NFT Marketplace
+          Kurio
         </Link>
         <Link to="/cart" aria-label={`Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`}>
           Carrinho ({count})
