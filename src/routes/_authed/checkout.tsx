@@ -102,7 +102,8 @@ function CheckoutPage() {
         <ReviewStep
           draft={draft as Required<Draft>}
           couponCode={coupon}
-          submitting={submit.isPending}
+          // Resposta perdida: só o reenvio (mesma chave) pode enviar; nova confirmação geraria outra chave.
+          submitting={submit.isPending || Boolean(lostResponse && pendingAttempt)}
           submitError={lostResponse ? null : submit.error}
           onBack={() => setStep('details')}
           onConfirm={(quote) => {

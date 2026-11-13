@@ -52,7 +52,6 @@ export function useSubmitOrder() {
   const qc = useQueryClient()
   const userId = useUser()?.id
   return useMutation({
-    // Uma tentativa em voo por vez: cliques repetidos caem no mesmo mutation key.
     mutationKey: ['submit-order', userId],
     mutationFn: (attempt: OrderAttempt) => api.orders.create(attempt.body, attempt.key),
     onSuccess: (order: Order) => {
