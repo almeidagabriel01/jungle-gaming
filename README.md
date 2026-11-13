@@ -1,4 +1,4 @@
-# NFT Marketplace
+# Kurio — marketplace de NFTs
 
 Marketplace de NFTs em React + TypeScript com descoberta, compra e conta do colecionador. Toda a
 integração (REST e Socket.IO) roda contra uma API simulada com MSW no próprio navegador — em
@@ -47,7 +47,7 @@ Sobrescreva em `.env.local` se precisar.
 
 | Usuário | E-mail | Senha |
 | --- | --- | --- |
-| Ana (carrinho com 1 item, 2 carteiras, favoritos) | `ana@jungle.test` | `Senha@123` |
+| Ana (carrinho do layout: 3 itens, 26,83 ETH; 2 carteiras; favoritos) | `ana@jungle.test` | `Senha@123` |
 | Bruno (1 carteira) | `bruno@jungle.test` | `Senha@123` |
 
 Cupons: `JUNGLE10` (10%), `WELCOME25` (25%), `EXPIRED5` (expirado). Qualquer outro código é inválido.
@@ -86,8 +86,8 @@ Disponível só com mocks ativos. Atua no "servidor": muda o mock DB, e a UI rec
 pelo evento Socket.IO — nunca por escrita direta em cache ou componente.
 
 ```js
-__mock.updateEdition('nft_010', 'nft_010_ed1', { price: '1.5' })   // emite nft.updated
-__mock.updateEdition('nft_010', 'nft_010_ed1', { available: 0 })   // esgota
+__mock.updateEdition('nft_001', 'nft_001_ed3', { price: '1.5' })   // emite nft.updated
+__mock.updateEdition('nft_001', 'nft_001_ed3', { available: 0 })   // esgota
 __mock.dropSockets()                                                // derruba o socket (reconexão automática)
 __mock.recentEvents()                                               // eventos emitidos (para reenviar)
 __mock.emitRaw(event)                                               // reenvia um evento (duplicado/antigo)

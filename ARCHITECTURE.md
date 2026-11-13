@@ -49,7 +49,7 @@ em `ApiError { status, code, message, fields }`; rede e timeout viram `status 0`
 | Refresh | `POST /auth/refresh` | 200 `{user, tokens}` (rotação) · 401 `SESSION_EXPIRED` |
 | Sessão | `GET /session` | 200 `{user}` · 401 |
 | Logout | `POST /auth/logout` | 204 |
-| Catálogo | `GET /nfts?q&categories&collection&minPrice&maxPrice&availability&sort&page` | 200 `{items, page, pageSize, total, totalPages, collections}` |
+| Catálogo | `GET /nfts?q&tab&categories&networks&collection&minPrice&maxPrice&sort&page` | 200 `{items, page, pageSize, total, totalPages, facets}` |
 | Destaques | `GET /nfts/featured` | 200 `{items}` |
 | Detalhe | `GET /nfts/:id` | 200 `Nft` · 404 `NFT_NOT_FOUND` |
 | Favoritos | `GET /me/favorites` · `PUT`/`DELETE /me/favorites/:nftId` | 200 `{items}` · 401 · 404 |
@@ -163,16 +163,26 @@ Mutations nunca repetem sozinhas; o pedido usa idempotência explícita. Atualiz
 ## Mock DB
 
 Estado único (`src/mocks/db.ts`) em localStorage com chave versionada pelo seed. Seed determinístico
-(`src/mocks/seed.ts`): 48 NFTs com 1–4 edições, 6 categorias, 8 coleções, preços de `0.0001` a `25` ETH
-(incluindo `0.000123456789`), estoques esgotados e de última unidade, 2 usuários, favoritos, carrinho,
-carteiras e pedidos. Toda mutação é síncrona dentro de `withDb` (sem atualização perdida) e os eventos são
+(`src/mocks/seed.ts`), derivado do Figma: 239 NFTs com as contagens exatas da lateral "Coleções" do frame
+Início, os 9 primeiros iguais aos cards do layout (nomes, preços, preço riscado), redes Ethereum/Polygon/Solana,
+tiragens 1/1, 1/10, 1/50 e Aberta, preços de `0.02` a `12.3` ETH (incluindo `0.123456789`), edições esgotadas
+e de última unidade, 2 usuários, favoritos, o carrinho do frame Carrinho (subtotal 26,83 ETH), carteiras e
+pedidos. As imagens são as 4 artes do arquivo (exportadas pela API do Figma, em WebP 480/960 px, com uma
+vista aproximada para a galeria). Toda mutação é síncrona dentro de `withDb` (sem atualização perdida) e os eventos são
 publicados após persistir.
 
 ## Decisões e desvios
 
 - **MSW 2.15 em vez de 3.x:** exigência de peer do `@mswjs/socket.io-binding` publicado.
-- **Fase 1 sem o Figma:** as telas atuais são estrutura semântica funcional; layout, tipografia e assets do
-  Figma entram na fase 2. As artes em `public/art` são placeholders SVG gerados por
-  `scripts/generate-art.mjs` até a troca pelos assets do arquivo.
+- **Contrato derivado do Figma, telas na fase 2:** dados, filtros e campos seguem o layout; as telas atuais
+  são estrutura semântica funcional, sem o visual final.
+- **"Coleções" × coleção:** a lateral "Coleções" do layout (Arte digital, Música…) é `category`; a coleção do
+  projeto ("Coleção: Kurio Apes" no detalhe) é `collection`, filtrável por id para "Mais desta coleção".
+- **Facetas:** a contagem de cada opção aplica todos os outros filtros, menos o próprio grupo; a faixa de
+  preço ignora o filtro de preço. Os números do Figma para redes (119/78/86) não fecham com o total do
+  layout; o seed mantém a proporção.
+- **Abas:** "Novos lançamentos" e "Em alta" usam marcações do catálogo (`isNew`, `trending`), não o relógio,
+  para manter testes e baselines estáveis.
+- **Preços em ETH em todas as redes:** como no layout; Polygon e Solana não usam unidade própria.
 - **Sem runner de teste unitário:** as regras de negócio do mock e de dinheiro são exercitadas pelos E2E
   através dos handlers MSW, como pede o enunciado.
