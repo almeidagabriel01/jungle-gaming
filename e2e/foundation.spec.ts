@@ -66,6 +66,8 @@ test.describe('pedido idempotente', () => {
     // O servidor criou o pedido, mas a resposta se perde (timeout de 10 s do cliente).
     const resend = page.getByRole('button', { name: 'Reenviar pedido' })
     await expect(resend).toBeVisible({ timeout: 20_000 })
+    // Sem resposta, uma nova confirmação abriria outra chave: só o reenvio fica disponível.
+    await expect(confirm).toBeDisabled()
     expect(await mock.server((m) => m.snapshot().orders.length)).toBe(ordersBefore + 1)
 
     await resend.click()

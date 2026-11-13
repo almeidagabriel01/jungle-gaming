@@ -70,7 +70,8 @@ function CheckoutPage() {
   }, [])
 
   const pendingAttempt = orderAttempt.load(user.id)
-  const lostResponse = submit.error instanceof ApiError && (submit.error.status === 0 || submit.error.status >= 500)
+  // Tentativa guardada sem resposta definitiva (timeout, 5xx, 401): só pode ser reenviada com a mesma chave.
+  const unresolved = Boolean(pendingAttempt) && submit.isError
 
   return (
     <div className="grid gap-6">
@@ -81,7 +82,7 @@ function CheckoutPage() {
           Enviando seu pedido…
         </p>
       )}
-      {lostResponse && pendingAttempt && (
+      {unresolved && pendingAttempt && (
         <div role="alert" className="grid justify-items-start gap-2 rounded-md border border-destructive/40 p-3 text-sm">
           <p>Não recebemos a confirmação do envio. Reenviar recupera o mesmo pedido, sem cobrança duplicada.</p>
           <Button variant="outline" onClick={() => send(pendingAttempt)} disabled={submit.isPending}>
@@ -102,9 +103,10 @@ function CheckoutPage() {
         <ReviewStep
           draft={draft as Required<Draft>}
           couponCode={coupon}
-          // Resposta perdida: só o reenvio (mesma chave) pode enviar; nova confirmação geraria outra chave.
-          submitting={submit.isPending || Boolean(lostResponse && pendingAttempt)}
-          submitError={lostResponse ? null : submit.error}
+          submitting={submit.isPending}
+          // Com tentativa guardada, uma nova confirmação geraria outra chave (pedido duplicado).
+          locked={Boolean(pendingAttempt)}
+          submitError={unresolved ? null : submit.error}
           onBack={() => setStep('details')}
           onConfirm={(quote) => {
             const buyer = Buyer.parse(draft)
@@ -283,6 +285,7 @@ function ReviewStep({
   draft,
   couponCode,
   submitting,
+  locked,
   submitError,
   onBack,
   onConfirm,
@@ -290,6 +293,7 @@ function ReviewStep({
   draft: Required<Draft>
   couponCode?: string
   submitting: boolean
+  locked: boolean
   submitError: unknown
   onBack: () => void
   onConfirm: (quote: Quote) => void
@@ -358,7 +362,7 @@ function ReviewStep({
           Voltar
         </Button>
         <Button
-          disabled={stale || !current.purchasable || submitting || revalidating}
+          disabled={stale || !current.purchasable || submitting || locked || revalidating}
           onClick={() => {
             // Revalida preço, disponibilidade, cupom e taxa imediatamente antes de confirmar.
             setRevalidating(true)
