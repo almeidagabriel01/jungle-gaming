@@ -1,4 +1,4 @@
-import { HttpResponse, type DefaultBodyType, type HttpResponseResolver, type PathParams } from 'msw'
+import { HttpResponse, type HttpResponseResolver, type PathParams } from 'msw'
 import type { z } from 'zod'
 import type { ErrorCode } from '@/contracts/errors'
 import { guestOwner, userOwner, type Tx } from '../db'
@@ -56,7 +56,7 @@ export function resolveOwner(tx: Tx, request: Request): Result<string> {
  * Envolve um resolver com as condições de rede do cenário ativo:
  * offline (erro de rede), 503 em leituras e latência determinística.
  */
-export function route<P extends PathParams>(resolver: HttpResponseResolver<P, DefaultBodyType>): HttpResponseResolver<P, DefaultBodyType> {
+export function route<P extends PathParams>(resolver: HttpResponseResolver<P>): HttpResponseResolver<P> {
   return async (info) => {
     if (hasScenario('offline')) return HttpResponse.error()
     await networkDelay(info.request)

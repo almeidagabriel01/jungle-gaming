@@ -46,14 +46,14 @@ export const PAGE_SIZE = 12
  * com fallback para o default em qualquer valor inválido.
  */
 export const NftSearch = z.object({
-  q: z.string().trim().max(80).catch(''),
-  categories: z.array(Category).catch([]),
-  collection: z.string().catch(''),
+  q: z.string().trim().max(80).default('').catch(''),
+  categories: z.array(Category).default([]).catch([]),
+  collection: z.string().default('').catch(''),
   minPrice: Eth.optional().catch(undefined),
   maxPrice: Eth.optional().catch(undefined),
-  availability: Availability.catch('all'),
-  sort: NftSort.catch('recent'),
-  page: z.coerce.number().int().min(1).catch(1),
+  availability: Availability.default('all').catch('all'),
+  sort: NftSort.default('recent').catch('recent'),
+  page: z.coerce.number().int().min(1).default(1).catch(1),
 })
 export type NftSearch = z.infer<typeof NftSearch>
 

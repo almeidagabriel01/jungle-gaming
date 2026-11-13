@@ -179,7 +179,9 @@ export const accountHandlers = [
       withDb((tx) => {
         const auth = authenticate(tx, request)
         if (!auth.ok) return auth.response
-        if (tx.db.walletConnections[auth.value]?.walletId === params.id) delete tx.db.walletConnections[auth.value]
+        if (tx.db.walletConnections[auth.value]?.walletId === params.id) {
+          tx.db.walletConnections = Object.fromEntries(Object.entries(tx.db.walletConnections).filter(([userId]) => userId !== auth.value))
+        }
         return new HttpResponse(null, { status: 204 })
       }),
     ),
