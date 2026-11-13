@@ -15,6 +15,9 @@ import { createSeed, SEED_VERSION } from './seed'
 
 export type DbUser = User & { passwordHash: string; salt: string }
 export type DbNft = Omit<Nft, 'minPrice' | 'available'>
+
+/** Taxa de rede estimada por pedido (Ethereum: 0,016 ETH, como no frame Carrinho). */
+export const NETWORK_FEES: Record<Network, string> = { ethereum: '0.016', polygon: '0.0004', solana: '0.0001' }
 export type DbCartItem = { id: string; nftId: string; editionId: string; quantity: number }
 export type DbCart = { id: string; owner: string; items: DbCartItem[]; updatedAt: string }
 export type DbQuote = {

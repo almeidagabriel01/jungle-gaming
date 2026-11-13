@@ -4,9 +4,11 @@ import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eth } from '@/contracts/common'
-import { Category, NFT_SEARCH_DEFAULTS, NftSearch, NftSort, type Nft, type NftList } from '@/contracts/nft'
+import { Network } from '@/contracts/common'
+import { Category, NFT_SEARCH_DEFAULTS, NftSearch, NftSort, NftTab, type Nft, type NftFacets } from '@/contracts/nft'
+import { CATEGORY_LABEL, NETWORK_LABEL, SORT_LABEL, TAB_LABEL } from '@/lib/labels'
 import { formValues } from '@/lib/forms'
-import { formatEth } from '@/lib/money'
+import { eth, formatEth } from '@/lib/money'
 import { useFeaturedNfts, useNftList } from '@/queries/catalog'
 
 export const Route = createFileRoute('/')({
@@ -14,21 +16,6 @@ export const Route = createFileRoute('/')({
   search: { middlewares: [stripSearchParams(NFT_SEARCH_DEFAULTS)] },
   component: CatalogPage,
 })
-
-const CATEGORY_LABEL: Record<Category, string> = {
-  art: 'Arte',
-  gaming: 'Games',
-  music: 'Música',
-  photography: 'Fotografia',
-  collectibles: 'Colecionáveis',
-  sports: 'Esportes',
-}
-const SORT_LABEL: Record<NftSort, string> = {
-  recent: 'Mais recentes',
-  'price-asc': 'Menor preço',
-  'price-desc': 'Maior preço',
-  name: 'Nome (A–Z)',
-}
 
 function CatalogPage() {
   const search = Route.useSearch()
@@ -55,7 +42,7 @@ function CatalogPage() {
         <h1 id="catalog-title" className="text-2xl font-semibold">
           Catálogo
         </h1>
-        <Filters search={search} collections={list.data?.collections ?? []} onChange={update} />
+        <Filters search={search} facets={list.data?.facets} onChange={update} />
 
         <div aria-live="polite" className="text-sm text-muted-foreground" data-testid="catalog-summary">
           {list.data && `${list.data.total} ${list.data.total === 1 ? 'resultado' : 'resultados'}`}
@@ -115,9 +102,11 @@ function Featured() {
 }
 
 function NftCard({ nft }: { nft: Nft }) {
+  // Preço anterior da edição que define o "a partir de" (riscado no layout).
+  const compareAt = nft.editions.find((e) => eth.eq(e.price, nft.minPrice) && e.compareAtPrice)?.compareAtPrice
   return (
     <article className="grid gap-2 rounded-lg border p-3">
-      <img src={nft.images[0]!.url} alt={nft.images[0]!.alt} width={400} height={400} loading="lazy" decoding="async" className="aspect-square w-full rounded-md object-cover" />
+      <img src={nft.images[0]!.thumbnailUrl} alt={nft.images[0]!.alt} width={480} height={480} loading="lazy" decoding="async" className="aspect-square w-full rounded-md object-cover" />
       <h3 className="font-medium">
         <Link to="/nfts/$nftId" params={{ nftId: nft.id }} className="hover:underline">
           {nft.name}
@@ -126,6 +115,7 @@ function NftCard({ nft }: { nft: Nft }) {
       <p className="text-sm text-muted-foreground">{nft.collection.name}</p>
       <p className="tabular-nums" data-testid="nft-price">
         A partir de {formatEth(nft.minPrice)}
+        {compareAt && <s className="ml-2 text-sm text-muted-foreground">{formatEth(compareAt)}</s>}
       </p>
       <p className="text-sm">{nft.available > 0 ? `${nft.available} disponíveis` : 'Esgotado'}</p>
     </article>
@@ -147,7 +137,7 @@ function GridSkeleton({ count = 8 }: { count?: number }) {
   )
 }
 
-function Filters({ search, collections, onChange }: { search: NftSearch; collections: NftList['collections']; onChange: (patch: Partial<NftSearch>) => void }) {
+function Filters({ search, facets, onChange }: { search: NftSearch; facets: NftFacets | undefined; onChange: (patch: Partial<NftSearch>) => void }) {
   const [term, setTerm] = useState(search.q)
   const [syncedQ, setSyncedQ] = useState(search.q)
   const [priceError, setPriceError] = useState<string | null>(null)
@@ -200,59 +190,58 @@ function Filters({ search, collections, onChange }: { search: NftSearch; collect
         />
       </label>
 
-      <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium">Categorias</legend>
-        <div className="flex flex-wrap gap-3">
-          {Category.options.map((category) => (
-            <label key={category} className="flex items-center gap-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={search.categories.includes(category)}
-                onChange={(e) => {
-                  onChange({
-                    categories: e.target.checked ? [...search.categories, category] : search.categories.filter((c) => c !== category),
-                  })
-                }}
-              />
-              {CATEGORY_LABEL[category]}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Disponibilidade</span>
-          <select
-            value={search.availability}
-            onChange={(e) => {
-              onChange({ availability: e.target.value as NftSearch['availability'] })
+      <div role="group" aria-label="Lista" className="flex flex-wrap gap-2">
+        {NftTab.options.map((tab) => (
+          <Button
+            key={tab}
+            variant={search.tab === tab ? 'default' : 'outline'}
+            aria-pressed={search.tab === tab}
+            onClick={() => {
+              onChange({ tab })
             }}
-            className="h-9 rounded-md border px-2"
           >
-            <option value="all">Todos</option>
-            <option value="available">Disponíveis</option>
-            <option value="sold-out">Esgotados</option>
-          </select>
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Ordenar por</span>
-          <select
-            value={search.sort}
-            onChange={(e) => {
-              onChange({ sort: e.target.value as NftSort })
-            }}
-            className="h-9 rounded-md border px-2"
-          >
-            {NftSort.options.map((sort) => (
-              <option key={sort} value={sort}>
-                {SORT_LABEL[sort]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <CollectionFilter value={search.collection} collections={collections} onChange={(collection) => onChange({ collection })} />
+            {TAB_LABEL[tab]}
+          </Button>
+        ))}
       </div>
+
+      <CheckboxGroup
+        legend="Coleções"
+        options={Category.options}
+        selected={search.categories}
+        label={(c) => CATEGORY_LABEL[c]}
+        count={(c) => facets?.categories[c]}
+        onChange={(categories) => {
+          onChange({ categories })
+        }}
+      />
+      <CheckboxGroup
+        legend="Rede"
+        options={Network.options}
+        selected={search.networks}
+        label={(n) => NETWORK_LABEL[n]}
+        count={(n) => facets?.networks[n]}
+        onChange={(networks) => {
+          onChange({ networks })
+        }}
+      />
+
+      <label className="grid max-w-xs gap-1.5 text-sm">
+        <span className="font-medium">Ordenar por</span>
+        <select
+          value={search.sort}
+          onChange={(e) => {
+            onChange({ sort: e.target.value as NftSort })
+          }}
+          className="h-9 rounded-md border px-2"
+        >
+          {NftSort.options.map((sort) => (
+            <option key={sort} value={sort}>
+              {SORT_LABEL[sort]}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <form
         className="flex flex-wrap items-end gap-3"
@@ -263,6 +252,9 @@ function Filters({ search, collections, onChange }: { search: NftSearch; collect
         }}
         key={`${search.minPrice ?? ''}-${search.maxPrice ?? ''}`}
       >
+        <p className="w-full text-sm font-medium">
+          Faixa de preço{facets?.price && <span className="font-normal"> · {formatEth(facets.price.min)} a {formatEth(facets.price.max)}</span>}
+        </p>
         <label className="grid gap-1.5 text-sm">
           <span className="font-medium">Preço mínimo (ETH)</span>
           <input name="minPrice" inputMode="decimal" defaultValue={search.minPrice ?? ''} aria-invalid={priceError ? true : undefined} className="h-9 w-32 rounded-md border px-2" />
@@ -272,7 +264,7 @@ function Filters({ search, collections, onChange }: { search: NftSearch; collect
           <input name="maxPrice" inputMode="decimal" defaultValue={search.maxPrice ?? ''} aria-invalid={priceError ? true : undefined} className="h-9 w-32 rounded-md border px-2" />
         </label>
         <Button type="submit" variant="outline">
-          Aplicar preço
+          Aplicar
         </Button>
         {priceError && (
           <p id="price-error" className="w-full text-sm text-destructive">
@@ -284,26 +276,41 @@ function Filters({ search, collections, onChange }: { search: NftSearch; collect
   )
 }
 
-/** As coleções vêm da própria resposta do catálogo (sem lista fixa no cliente). */
-function CollectionFilter({ value, collections, onChange }: { value: string; collections: NftList['collections']; onChange: (collection: string) => void }) {
+/** Grupo de filtros multisseleção; a contagem vem da API (facets), já considerando os outros filtros. */
+function CheckboxGroup<T extends string>({
+  legend,
+  options,
+  selected,
+  label,
+  count,
+  onChange,
+}: {
+  legend: string
+  options: readonly T[]
+  selected: T[]
+  label: (option: T) => string
+  count: (option: T) => number | undefined
+  onChange: (selected: T[]) => void
+}) {
   return (
-    <label className="grid gap-1.5 text-sm">
-      <span className="font-medium">Coleção</span>
-      <select
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value)
-        }}
-        className="h-9 rounded-md border px-2"
-      >
-        <option value="">Todas</option>
-        {collections.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
+    <fieldset className="grid gap-2">
+      <legend className="text-sm font-medium">{legend}</legend>
+      <div className="flex flex-wrap gap-3">
+        {options.map((option) => (
+          <label key={option} className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={selected.includes(option)}
+              onChange={(e) => {
+                onChange(e.target.checked ? [...selected, option] : selected.filter((o) => o !== option))
+              }}
+            />
+            {label(option)}
+            {count(option) !== undefined && <span className="text-muted-foreground tabular-nums">({count(option)})</span>}
+          </label>
         ))}
-      </select>
-    </label>
+      </div>
+    </fieldset>
   )
 }
 

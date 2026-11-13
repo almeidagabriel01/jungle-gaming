@@ -25,6 +25,7 @@ export const eth = {
   cmp: (a: Eth, b: Eth): number => new D(a).comparedTo(b),
   eq: (a: Eth, b: Eth): boolean => new D(a).equals(b),
   min: (...values: Eth[]): Eth => toEth(D.min(...values)),
+  max: (...values: Eth[]): Eth => toEth(D.max(...values)),
 }
 
 const intFormatter = new Intl.NumberFormat('pt-BR')

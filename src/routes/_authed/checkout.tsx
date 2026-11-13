@@ -13,6 +13,7 @@ import { Quote } from '@/contracts/cart'
 import { Network } from '@/contracts/common'
 import { Buyer, type Order } from '@/contracts/order'
 import { apiFieldErrors, focusFirstError, validate, type FieldErrors } from '@/lib/forms'
+import { NETWORK_LABEL } from '@/lib/labels'
 import { formatEth } from '@/lib/money'
 import { useConnectWallet, useDisconnectWallet, useWallets } from '@/queries/account'
 import { useCartOwner, useQuote } from '@/queries/cart'
@@ -24,7 +25,6 @@ export const Route = createFileRoute('/_authed/checkout')({
   component: CheckoutPage,
 })
 
-const NETWORK_LABEL: Record<Network, string> = { ethereum: 'Ethereum', polygon: 'Polygon', arbitrum: 'Arbitrum' }
 
 /** Rascunho do checkout por usuário: sobrevive a refresh e a expiração de sessão. */
 const Draft = Buyer.partial().extend({ walletId: z.string().optional(), network: Network.optional() })

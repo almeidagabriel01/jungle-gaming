@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { AddCartItemBody, MergeCartBody, QuoteRequest, UpdateCartItemBody, type Cart, type Quote, type QuoteLine } from '@/contracts/cart'
 import type { Network } from '@/contracts/common'
 import { eth } from '@/lib/money'
-import { findNft, getCart, guestOwner, hash, iso, nextId, userOwner, withDb, type DbCart, type DbQuote, type Tx } from '../db'
+import { NETWORK_FEES, findNft, getCart, guestOwner, hash, iso, nextId, userOwner, withDb, type DbCart, type DbQuote, type Tx } from '../db'
 import { API, apiError, authenticate, parseBody, resolveOwner, route } from './http'
 
 /** Cupons fictícios documentados no README. */
@@ -12,7 +12,6 @@ const COUPONS: Record<string, { percentOff: number; expiresAt: string }> = {
   EXPIRED5: { percentOff: 5, expiresAt: '2025-01-01T00:00:00.000Z' },
 }
 
-export const NETWORK_FEES: Record<Network, string> = { ethereum: '0.0021', polygon: '0.00004', arbitrum: '0.00031' }
 
 export function toCart(tx: Tx, cart: DbCart): Cart {
   return {
@@ -28,6 +27,7 @@ export function toCart(tx: Tx, cart: DbCart): Cart {
           nftId: nft.id,
           editionId: edition.id,
           name: nft.name,
+          tokenId: nft.tokenId,
           editionName: edition.name,
           image: nft.images[0]!,
           quantity: item.quantity,
@@ -65,7 +65,9 @@ export function buildQuote(tx: Tx, owner: string, network: Network, coupon: { co
     nftId: item.nftId,
     editionId: item.editionId,
     name: item.name,
+    tokenId: item.tokenId,
     editionName: item.editionName,
+    image: item.image,
     quantity: item.quantity,
     unitPrice: item.unitPrice,
     lineTotal: eth.mul(item.unitPrice, item.quantity),

@@ -1,13 +1,15 @@
 import { z } from 'zod'
 import { Eth, Id, IsoDate, Network } from './common'
+import { NftImage } from './nft'
 
 export const CartItem = z.object({
   id: Id,
   nftId: Id,
   editionId: Id,
   name: z.string(),
+  tokenId: z.string(),
   editionName: z.string(),
-  image: z.object({ url: z.string(), alt: z.string() }),
+  image: NftImage,
   quantity: z.int().min(1),
   /** Preço atual da edição, segundo a API. */
   unitPrice: Eth,
@@ -40,7 +42,9 @@ export const QuoteLine = z.object({
   nftId: Id,
   editionId: Id,
   name: z.string(),
+  tokenId: z.string(),
   editionName: z.string(),
+  image: NftImage,
   quantity: z.int().min(1),
   unitPrice: Eth,
   lineTotal: Eth,

@@ -88,7 +88,7 @@ function CartLine({ item }: { item: CartItem }) {
   const errorId = `qty-error-${item.id}`
   return (
     <article className="grid grid-cols-[4rem_1fr] gap-3 rounded-lg border p-3" aria-label={item.name}>
-      <img src={item.image.url} alt={item.image.alt} width={64} height={64} className="size-16 rounded-md object-cover" />
+      <img src={item.image.thumbnailUrl} alt={item.image.alt} width={64} height={64} className="size-16 rounded-md object-cover" />
       <div className="grid gap-2">
         <div className="flex flex-wrap justify-between gap-2">
           <Link to="/nfts/$nftId" params={{ nftId: item.nftId }} className="font-medium hover:underline">
@@ -99,7 +99,7 @@ function CartLine({ item }: { item: CartItem }) {
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Edição {item.editionName} · {item.available > 0 ? `${item.available} disponíveis` : 'Esgotada'}
+          ID do token: #{item.tokenId} · Edição {item.editionName} · {item.available > 0 ? `${item.available} disponíveis` : 'Esgotada'}
         </p>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 text-sm">

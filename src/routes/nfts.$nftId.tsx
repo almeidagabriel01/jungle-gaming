@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { Nft } from '@/contracts/nft'
 import { announce } from '@/lib/announcer'
 import { apiFieldErrors } from '@/lib/forms'
+import { NETWORK_LABEL, RARITY_LABEL } from '@/lib/labels'
 import { formatEth } from '@/lib/money'
 import { useAddToCart, useCart } from '@/queries/cart'
 import { useFavorites, useNft, useToggleFavorite } from '@/queries/catalog'
@@ -72,7 +73,7 @@ function NftDetail({ nft }: { nft: Nft }) {
               aria-pressed={i === imageIndex}
               className="size-16 overflow-hidden rounded-md border aria-pressed:ring-2 aria-pressed:ring-ring"
             >
-              <img src={img.url} alt="" width={64} height={64} className="size-full object-cover" />
+              <img src={img.thumbnailUrl} alt="" width={64} height={64} className="size-full object-cover" />
             </button>
           ))}
         </div>
@@ -87,6 +88,24 @@ function NftDetail({ nft }: { nft: Nft }) {
           <p className="text-sm">Criado por {nft.creator.name}</p>
         </div>
         <p>{nft.description}</p>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          <dt>ID do token</dt>
+          <dd>#{nft.tokenId}</dd>
+          <dt>Atributos</dt>
+          <dd>{[...nft.attributes, RARITY_LABEL[nft.rarity]].join(', ')}</dd>
+          <dt>Rede</dt>
+          <dd>{NETWORK_LABEL[nft.network]}</dd>
+          <dt>Contrato</dt>
+          <dd className="break-all">
+            {nft.contract.address} · {nft.contract.standard}
+          </dd>
+          <dt>Direitos autorais</dt>
+          <dd>{nft.royaltyPercent.toLocaleString('pt-BR')}% nas vendas secundárias</dd>
+          <dt>Avaliações</dt>
+          <dd>
+            {nft.rating.average.toLocaleString('pt-BR')} de 5 · {nft.rating.count} avaliações de colecionadores
+          </dd>
+        </dl>
 
         <fieldset className="grid gap-2">
           <legend className="font-medium">Edição</legend>

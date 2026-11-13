@@ -1,20 +1,22 @@
 import { http, HttpResponse } from 'msw'
-import { NftSearch, PAGE_SIZE, type Nft } from '@/contracts/nft'
+import { Network } from '@/contracts/common'
+import { Category, NftSearch, PAGE_SIZE, type Nft, type NftList } from '@/contracts/nft'
 import { eth } from '@/lib/money'
 import { findNft, toNft, withDb, type Tx } from '../db'
 import { hasScenario } from '../scenarios'
 import { API, apiError, authenticate, route } from './http'
 
-/** Converte a query string da API (categorias separadas por vírgula) no schema compartilhado. */
+/** Converte a query string da API (listas separadas por vírgula) no schema compartilhado. */
 export function parseSearch(url: URL) {
   const p = url.searchParams
   return NftSearch.parse({
     q: p.get('q') ?? undefined,
+    tab: p.get('tab') ?? undefined,
     categories: p.get('categories')?.split(',').filter(Boolean),
+    networks: p.get('networks')?.split(',').filter(Boolean),
     collection: p.get('collection') ?? undefined,
     minPrice: p.get('minPrice') ?? undefined,
     maxPrice: p.get('maxPrice') ?? undefined,
-    availability: p.get('availability') ?? undefined,
     sort: p.get('sort') ?? undefined,
     page: p.get('page') ?? undefined,
   })
@@ -27,28 +29,43 @@ const sorters: Record<NftSearch['sort'], (a: Nft, b: Nft) => number> = {
   name: (a, b) => a.name.localeCompare(b.name, 'pt-BR'),
 }
 
-function search(tx: Tx, s: NftSearch) {
+type Filter = 'category' | 'network' | 'price' | 'other'
+
+/** Cada filtro separado, para as facetas poderem ignorar o próprio grupo. */
+function matchers(s: NftSearch): Record<Filter, (n: Nft) => boolean> {
   const term = s.q.toLowerCase()
-  const all = hasScenario('empty') ? [] : tx.db.nfts.map(toNft)
-  const filtered = all.filter(
-    (n) =>
+  return {
+    category: (n) => s.categories.length === 0 || s.categories.includes(n.category),
+    network: (n) => s.networks.length === 0 || s.networks.includes(n.network),
+    price: (n) => (s.minPrice === undefined || eth.cmp(n.minPrice, s.minPrice) >= 0) && (s.maxPrice === undefined || eth.cmp(n.minPrice, s.maxPrice) <= 0),
+    other: (n) =>
       (!term || `${n.name} ${n.collection.name} ${n.creator.name}`.toLowerCase().includes(term)) &&
-      (s.categories.length === 0 || s.categories.includes(n.category)) &&
-      (!s.collection || n.collection.id === s.collection) &&
-      (s.minPrice === undefined || eth.cmp(n.minPrice, s.minPrice) >= 0) &&
-      (s.maxPrice === undefined || eth.cmp(n.minPrice, s.maxPrice) <= 0) &&
-      (s.availability === 'all' || (s.availability === 'available' ? n.available > 0 : n.available === 0)),
-  )
+      (s.tab === 'all' || (s.tab === 'new' ? n.isNew : n.trending)) &&
+      (!s.collection || n.collection.id === s.collection),
+  }
+}
+
+function search(tx: Tx, s: NftSearch): NftList {
+  const all = hasScenario('empty') ? [] : tx.db.nfts.map(toNft)
+  const match = matchers(s)
+  const except = (skip: Filter | null) => all.filter((n) => (Object.keys(match) as Filter[]).every((f) => f === skip || match[f](n)))
+  const countBy = <K extends string>(keys: readonly K[], items: Nft[], key: (n: Nft) => K) =>
+    Object.fromEntries(keys.map((k) => [k, items.filter((n) => key(n) === k).length])) as Record<K, number>
+
+  const filtered = except(null)
   filtered.sort(sorters[s.sort])
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const collections = [...new Map(tx.db.nfts.map((n) => [n.collection.id, n.collection])).values()]
+  const priced = except('price')
   return {
     items: filtered.slice((s.page - 1) * PAGE_SIZE, s.page * PAGE_SIZE),
     page: s.page,
     pageSize: PAGE_SIZE,
     total: filtered.length,
-    totalPages,
-    collections,
+    totalPages: Math.ceil(filtered.length / PAGE_SIZE),
+    facets: {
+      categories: countBy(Category.options, except('category'), (n) => n.category),
+      networks: countBy(Network.options, except('network'), (n) => n.network),
+      price: priced.length === 0 ? null : { min: eth.min(...priced.map((n) => n.minPrice)), max: eth.max(...priced.map((n) => n.minPrice)) },
+    },
   }
 }
 

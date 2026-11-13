@@ -6,7 +6,7 @@ export type Eth = z.infer<typeof Eth>
 
 export const Id = z.string().min(1)
 
-export const Network = z.enum(['ethereum', 'polygon', 'arbitrum'])
+export const Network = z.enum(['ethereum', 'polygon', 'solana'])
 export type Network = z.infer<typeof Network>
 
 export const IsoDate = z.iso.datetime()

@@ -17,14 +17,15 @@ import { Favorites, Nft, NftList, type NftSearch } from '@/contracts/nft'
 import { Order, OrderList, type CreateOrderBody } from '@/contracts/order'
 import { request, send } from './client'
 
-/** Serializa a busca para a query string da API (categorias por vírgula, defaults omitidos). */
+/** Serializa a busca para a query string da API (listas por vírgula, defaults omitidos). */
 const toCatalogParams = (s: NftSearch) => ({
   q: s.q || undefined,
+  tab: s.tab === 'all' ? undefined : s.tab,
   categories: s.categories.length > 0 ? s.categories.join(',') : undefined,
+  networks: s.networks.length > 0 ? s.networks.join(',') : undefined,
   collection: s.collection || undefined,
   minPrice: s.minPrice,
   maxPrice: s.maxPrice,
-  availability: s.availability === 'all' ? undefined : s.availability,
   sort: s.sort,
   page: s.page,
 })
