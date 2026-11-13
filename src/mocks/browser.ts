@@ -65,7 +65,12 @@ declare global {
 export async function startMocks() {
   const url = new URL(location.href)
   initScenarioFromUrl(url)
-  if (url.searchParams.has('mockReset')) resetDb()
+  if (url.searchParams.has('mockReset')) {
+    resetDb()
+    // Reset é uma ação única: sem isso, um refresh resetaria o estado de novo.
+    url.searchParams.delete('mockReset')
+    history.replaceState(history.state, '', url)
+  }
 
   setEventSink((event) => {
     recent.push(event)
