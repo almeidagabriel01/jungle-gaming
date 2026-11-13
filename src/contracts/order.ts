@@ -37,7 +37,7 @@ export const Order = z.object({
   networkFee: Eth,
   total: Eth,
   txHash: z.string().nullable(),
-  explorerUrl: z.string().nullable(),
+  explorerUrl: z.url({ protocol: /^https$/ }).nullable(),
   failureReason: z.string().nullable(),
   createdAt: IsoDate,
   updatedAt: IsoDate,
