@@ -57,7 +57,9 @@ export function useToggleFavorite() {
       return { previous, key }
     },
     onError: (_error, { nft, favorite }, context) => {
-      if (context) qc.setQueryData(context.key, context.previous)
+      // Sem lista anterior em cache, remove a otimista (setQueryData com undefined não faz nada).
+      if (context?.previous) qc.setQueryData(context.key, context.previous)
+      else if (context) qc.removeQueries({ queryKey: context.key, exact: true })
       announce(`Não foi possível ${favorite ? 'favoritar' : 'remover dos favoritos'} ${nft.name}. Tente novamente.`, { tone: 'error' })
     },
     onSuccess: (data, { nft, favorite }) => {
