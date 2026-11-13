@@ -30,5 +30,7 @@ export default tseslint.config(
   // Arquivos de rota exportam `Route` + componentes locais; o plugin do router cuida do HMR.
   { files: ['src/routes/**', 'src/app.tsx'], rules: { 'react-refresh/only-export-components': 'off' } },
   { files: ['src/mocks/**', 'src/main.tsx'], rules: { 'no-restricted-imports': 'off' } },
+  // Fixtures do Playwright usam `use()`, que não é o hook do React.
+  { files: ['e2e/**'], rules: { 'react-hooks/rules-of-hooks': 'off', 'no-restricted-imports': 'off' } },
   { files: ['src/components/ui/**'], rules: { 'react-refresh/only-export-components': 'off' } },
 )
