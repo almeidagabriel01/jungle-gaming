@@ -40,22 +40,26 @@ http.interceptors.request.use((config) => {
  * que receberem 401 ao mesmo tempo. Falhou → sessão expirada.
  * ---------------------------------------------------------------- */
 
-let refreshing: Promise<boolean> | null = null
+type RefreshResult = 'ok' | 'expired' | 'transient'
+let refreshing: Promise<RefreshResult> | null = null
 let onExpired: () => void = () => undefined
 export const setSessionExpiredHandler = (fn: () => void) => {
   onExpired = fn
 }
 
-function refreshSession(): Promise<boolean> {
-  const session = sessionStore.get()
-  if (!session) return Promise.resolve(false)
+function refreshSession(): Promise<RefreshResult> {
+  const used = sessionStore.get()?.tokens.refreshToken
+  if (!used) return Promise.resolve('expired')
   refreshing ??= axios
-    .post(`${API_URL}/auth/refresh`, { refreshToken: session.tokens.refreshToken }, { timeout: TIMEOUT_MS })
-    .then((res) => {
+    .post(`${API_URL}/auth/refresh`, { refreshToken: used }, { timeout: TIMEOUT_MS })
+    .then((res): RefreshResult => {
+      // Logout ou troca de conta durante o refresh: não regrava a sessão antiga.
+      if (sessionStore.get()?.tokens.refreshToken !== used) return 'transient'
       sessionStore.set(AuthResponse.parse(res.data))
-      return true
+      return 'ok'
     })
-    .catch(() => false)
+    // Só a recusa do servidor encerra a sessão; rede/timeout/5xx devolvem o erro original.
+    .catch((e: unknown): RefreshResult => (e instanceof AxiosError && (e.response?.status === 400 || e.response?.status === 401) ? 'expired' : 'transient'))
     .finally(() => {
       refreshing = null
     })
@@ -69,8 +73,9 @@ http.interceptors.response.use(undefined, async (error: unknown) => {
     const config = error.config as RetriableConfig
     if (config.headers.has('Authorization') && !config._retried) {
       config._retried = true
-      if (await refreshSession()) return http.request(config)
-      onExpired()
+      const result = await refreshSession()
+      if (result === 'ok') return http.request(config)
+      if (result === 'expired') onExpired()
     }
   }
   throw toApiError(error)
