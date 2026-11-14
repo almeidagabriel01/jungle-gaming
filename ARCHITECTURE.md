@@ -167,8 +167,10 @@ Estado único (`src/mocks/db.ts`) em localStorage com chave versionada pelo seed
 Início, os 9 primeiros iguais aos cards do layout (nomes, preços, preço riscado), redes Ethereum/Polygon/Solana,
 tiragens 1/1, 1/10, 1/50 e Aberta, preços de `0.02` a `12.3` ETH (incluindo `0.123456789`), edições esgotadas
 e de última unidade, 2 usuários, favoritos, o carrinho do frame Carrinho (subtotal 26,83 ETH), carteiras e
-pedidos. As imagens são as 4 artes do arquivo (exportadas pela API do Figma, em WebP 480/960 px, com uma
-vista aproximada para a galeria). Toda mutação é síncrona dentro de `withDb` (sem atualização perdida) e os eventos são
+pedidos. As imagens são as 4 artes do arquivo (exportadas pela API do Figma, em WebP 480/960 px), cada uma
+com as quatro vistas da galeria do detalhe (inteira, busto, meio e close). Resumo, descrição em dois parágrafos
+e as linhas de Rede/Contrato/Direitos seguem os textos do layout, montados com os dados de cada NFT
+(rede, padrão do contrato, armazenamento dos metadados, criador e royalty). Toda mutação é síncrona dentro de `withDb` (sem atualização perdida) e os eventos são
 publicados após persistir.
 
 ## Decisões e desvios
