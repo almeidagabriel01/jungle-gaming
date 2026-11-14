@@ -43,6 +43,18 @@ Sobrescreva em `.env.local` se precisar.
 | `pnpm test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
 | `pnpm lighthouse` | Build + Lighthouse CI (início e detalhe, mobile e desktop, 3 execuções); relatórios em `.lighthouseci/` |
 
+## Deploy
+
+O build é uma SPA estática em `dist/`, independente do host. Configure com build `pnpm build`, saída `dist`
+e Node 22+.
+
+- **Mocks:** vêm ligados pelo `.env` versionado (`VITE_ENABLE_MOCKS=true`). Uma variável de ambiente
+  definida no host tem prioridade sobre ele.
+- **Rotas internas:** no Vercel, o rewrite do `vercel.json` só entra depois dos arquivos estáticos. No
+  Cloudflare Pages, a ausência de `404.html` em `dist/` ativa o modo SPA; não adicione esse arquivo.
+- **Service worker:** `mockServiceWorker.js` é servido na raiz, sem cache, nos dois hosts (`vercel.json` e
+  `public/_headers`). `/assets/*`, com hash no nome, recebe cache longo e imutável.
+
 ## Credenciais fictícias
 
 | Usuário | E-mail | Senha |
