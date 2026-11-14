@@ -36,19 +36,22 @@ export const test = base.extend<{ mock: Mock }>({
         ),
       login: async (user) => {
         await page.goto('/login')
-        await page.getByLabel('E-mail').fill(user.email)
-        await page.getByLabel('Senha').fill(user.password)
-        await page.getByRole('button', { name: 'Entrar' }).click()
-        await expect(page.getByText(`Olá, ${user.name}`)).toBeVisible()
+        await page.getByLabel('E-mail', { exact: true }).fill(user.email)
+        await page.getByLabel('Senha', { exact: true }).fill(user.password)
+        await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+        // Desktop: menu da conta no header; mobile: atalho do perfil na barra inferior.
+        await expect(
+          page.getByRole('button', { name: `${user.name.split(' ')[0]}: menu da conta` }).or(page.getByRole('link', { name: `Perfil de ${user.name}` })),
+        ).toBeVisible()
       },
     }
     await use(mock)
   },
 })
 
-/** O app só monta depois do worker do MSW; o cabeçalho é o sinal de app pronto. */
+/** O app só monta depois do worker do MSW; o `<main>` é o sinal de app pronto (existe em todas as rotas). */
 export async function waitForApp(page: Page) {
-  await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible()
+  await expect(page.locator('main#conteudo')).toBeVisible()
 }
 
 export { expect }

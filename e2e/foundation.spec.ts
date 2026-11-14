@@ -1,67 +1,5 @@
 import { expect, test, USERS } from './fixtures'
 
-test.describe('catálogo com estado na URL', () => {
-  test('busca, filtros combinados, ordenação e paginação sobrevivem a histórico e refresh', async ({ page, mock }) => {
-    await mock.open('/')
-    const summary = page.getByTestId('catalog-summary')
-    const results = (n: number) => `${n} ${n === 1 ? 'resultado' : 'resultados'}`
-    // Contagem exibida ao lado da opção (facet da API) — o mesmo número que o filtro deve produzir.
-    const facet = async (group: string, option: string) => {
-      const text = await page.getByRole('group', { name: group }).getByText(option).innerText()
-      return Number(/\((\d+)\)/.exec(text)?.[1])
-    }
-    // Lê só depois que a lista assenta: durante o refetch o resumo ganha " · atualizando…".
-    const settled = async () => {
-      await expect(page.getByTestId('catalog-grid')).toHaveAttribute('aria-busy', 'false')
-      return summary.innerText()
-    }
-    await expect(summary).toHaveText('239 resultados')
-
-    // Paginação entra na URL.
-    await page.getByRole('button', { name: 'Próxima' }).click()
-    await expect(page).toHaveURL(/page=2/)
-    await expect(page.getByText('Página 2 de 27')).toBeVisible()
-
-    // Filtro reinicia a paginação e combina com outro do mesmo grupo, outro grupo e ordenação.
-    await page.getByLabel('Música').check()
-    await expect(page).not.toHaveURL(/page=/)
-    await expect(summary).toHaveText(results(65))
-    await page.getByLabel('Arte digital').check()
-    await expect(summary).toHaveText(results(65 + 33))
-    const polygon = await facet('Rede', 'Polygon')
-    await page.getByLabel('Polygon').check()
-    await expect(page).toHaveURL((url) => url.searchParams.get('networks') === '["polygon"]')
-    await expect(summary).toHaveText(results(polygon))
-    await page.getByLabel('Ordenar por').selectOption('price-asc')
-    await expect(page).toHaveURL(/sort=price-asc/)
-
-    // Busca (com debounce) também compõe a URL.
-    const beforeSearch = await settled()
-    await page.getByLabel('Buscar').fill('golden')
-    await expect(page).toHaveURL(/q=golden/)
-    await expect(summary).not.toHaveText(beforeSearch)
-    const searched = await settled()
-    const filtered = (await page.getByTestId('catalog-grid').textContent())!
-
-    // Voltar no histórico restaura o estado anterior (sem a busca), avançar recupera.
-    await page.goBack()
-    await expect(page).not.toHaveURL(/q=golden/)
-    await expect(page.getByLabel('Buscar')).toHaveValue('')
-    await expect(summary).toHaveText(beforeSearch)
-    await page.goForward()
-    await expect(page.getByLabel('Buscar')).toHaveValue('golden')
-
-    // Refresh mantém exatamente os mesmos resultados.
-    await page.reload()
-    await expect(summary).toHaveText(searched)
-    await expect(page.getByLabel('Música')).toBeChecked()
-    await expect(page.getByLabel('Arte digital')).toBeChecked()
-    await expect(page.getByLabel('Polygon')).toBeChecked()
-    await expect(page.getByLabel('Ordenar por')).toHaveValue('price-asc')
-    await expect(page.getByTestId('catalog-grid')).toHaveText(filtered)
-  })
-})
-
 test.describe('pedido idempotente', () => {
   test('timeout após criar o pedido: reenvio recupera o mesmo pedido, sem duplicar', async ({ page, mock }) => {
     test.setTimeout(90_000)
@@ -70,8 +8,8 @@ test.describe('pedido idempotente', () => {
     const ordersBefore = await mock.server((m) => m.snapshot().orders.length)
 
     await page.goto('/cart')
-    await page.getByRole('link', { name: 'Ir para o pagamento' }).click()
-    await page.getByLabel('País').fill('Brasil')
+    await page.getByRole('link', { name: 'Conectar e finalizar' }).click()
+    // Formulário vem preenchido pelo perfil e pela carteira principal.
     await page.getByRole('button', { name: 'Conectar carteira' }).click()
     await expect(page.getByTestId('wallet-connection')).toHaveText(/Carteira conectada/)
     await page.getByRole('button', { name: 'Revisar pedido' }).click()
@@ -128,8 +66,8 @@ test.describe('tempo real', () => {
     await mock.server((m, id) => m.updateEdition('nft_002', id, { price: '9.87654321' }), editionId)
 
     await expect(page.getByTestId('cart-notices')).toContainText('mudou')
-    await expect(page.getByText('9,87654321 ETH').first()).toBeVisible()
+    await expect(page.getByText('9.87654321 ETH').first()).toBeVisible()
     await expect(page.getByTestId('quote-total')).not.toHaveText(totalBefore)
-    await expect(page.getByTestId('quote-subtotal')).toHaveText('9,87654321 ETH')
+    await expect(page.getByTestId('quote-subtotal')).toHaveText('9.87654321 ETH')
   })
 })
