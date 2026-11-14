@@ -73,7 +73,7 @@ export function NftCard({
         </h3>
         <Price value={nft.minPrice} compareAt={compareAtOf(nft)} className="text-base leading-4 md:text-lg" />
       </div>
-      {favorite && <FavoriteButton nft={nft} variant="icon" className="absolute top-3 right-2.5 z-10 md:hidden" />}
+      {favorite && <FavoriteButton nft={nft} variant="icon" className="absolute top-3 right-2.5 z-10" />}
     </article>
   )
 }

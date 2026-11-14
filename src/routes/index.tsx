@@ -151,16 +151,24 @@ function MobileSearch({
 }) {
   const [term, setTerm] = useState(q)
   const [synced, setSynced] = useState(q)
+  // Último valor que o próprio campo enviou: quando ele chega na URL, o texto (com espaço final ou
+  // letras digitadas depois) fica como está.
+  const [sent, setSent] = useState(q)
   // URL → campo: voltar/avançar no histórico atualiza o texto (ajuste durante o render, sem efeito).
   if (q !== synced) {
     setSynced(q)
-    setTerm(q)
+    if (q !== sent) {
+      setSent(q)
+      setTerm(q)
+    }
   }
   // Campo → URL com debounce.
   useEffect(() => {
-    if (term.trim() === q) return
+    const next = term.trim()
+    if (next === q) return
     const id = setTimeout(() => {
-      onChange({ q: term.trim() })
+      setSent(next)
+      onChange({ q: next })
     }, 300)
     return () => {
       clearTimeout(id)
