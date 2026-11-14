@@ -1,22 +1,15 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { useSyncExternalStore, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from 'cn'
 import { FacebookLogo, GoogleLogo } from '@/components/brand-icons'
 import { CloseIcon } from '@/components/icons/auth-icons'
 import { unavailable } from '@/lib/unavailable'
+import { DESKTOP_QUERY, useMediaQuery } from '@/lib/use-media-query'
 import { isPrivatePath } from '@/session/session'
 
 type Mode = 'login' | 'register'
 
-const DESKTOP = '(min-width: 48rem)'
-const subscribe = (onChange: () => void) => {
-  const mql = window.matchMedia(DESKTOP)
-  mql.addEventListener('change', onChange)
-  return () => mql.removeEventListener('change', onChange)
-}
-/** Mesmo breakpoint (md) em que o cabeçalho desktop aparece. Um único formulário no DOM, só o invólucro muda. */
-const useIsDesktop = () => useSyncExternalStore(subscribe, () => window.matchMedia(DESKTOP).matches)
 
 type AuthScreenProps = {
   mode: Mode
@@ -28,7 +21,8 @@ type AuthScreenProps = {
 
 /** Desktop: modal sobre um fundo decorativo. Mobile: tela cheia com a marca e o link para a outra tela. */
 export function AuthScreen({ mode, title, description, redirect, children }: AuthScreenProps) {
-  const isDesktop = useIsDesktop()
+  // Mesmo breakpoint (md) do cabeçalho desktop: um único formulário no DOM, só o invólucro muda.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const router = useRouter()
 
   if (!isDesktop) {

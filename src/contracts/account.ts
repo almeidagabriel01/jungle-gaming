@@ -39,23 +39,20 @@ export const LoginBody = z.object({
 })
 export type LoginBody = z.infer<typeof LoginBody>
 
+/** Nome de usuário: a mesma regra no cadastro, no perfil e no pagamento. */
+export const Username = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9_]{3,20}$/, 'Use de 3 a 20 letras minúsculas, números ou _')
+
 export const RegisterBody = z.object({
-  // Mesma regra do nome de usuário editável no perfil.
-  username: z
-    .string()
-    .trim()
-    .regex(/^[a-z0-9_]{3,20}$/, 'Use de 3 a 20 letras minúsculas, números ou _'),
+  username: Username,
   email: z.email('E-mail inválido'),
   password: Password,
 })
 export type RegisterBody = z.infer<typeof RegisterBody>
 
 export const RefreshBody = z.object({ refreshToken: z.string() })
-
-export const Username = z
-  .string()
-  .trim()
-  .regex(/^[a-z0-9_]{3,20}$/, 'Use de 3 a 20 letras minúsculas, números ou _')
 
 /** Nome ENS completo; o formulário compõe nome + sufixo ".eth". */
 export const EnsName = z

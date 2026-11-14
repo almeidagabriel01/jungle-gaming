@@ -6,17 +6,14 @@ import { CloseIcon } from '@/components/icons/cart-icons'
 import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { WalletProvider } from '@/contracts/account'
 import type { Order } from '@/contracts/order'
-import { NETWORK_LABEL } from '@/lib/labels'
+import { NETWORK_LABEL, PROVIDER_LABEL } from '@/lib/labels'
 import { eth, formatEth } from '@/lib/money'
 import { useOrder } from '@/queries/orders'
 
 export const Route = createFileRoute('/_authed/orders/$orderId')({
   component: OrderPage,
 })
-
-const PROVIDER_LABEL: Record<WalletProvider, string> = { metamask: 'MetaMask', coinbase: 'Coinbase Wallet', walletconnect: 'WalletConnect' }
 
 const STATUS_MESSAGE: Record<Order['status'], string> = {
   pending: 'Aguardando confirmação do pagamento.',
