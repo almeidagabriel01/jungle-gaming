@@ -387,11 +387,11 @@ function Share({ nft }: { nft: Nft }) {
   const url = `${window.location.origin}/nfts/${nft.id}`
   const text = `${nft.name} na Kurio`
   const enc = encodeURIComponent
-  // Alvo de 24 px (WCAG 2.5.8) numa linha de 18 px como no layout: a sobra transborda sem empurrar a página.
+  // Alvo de 24 px (WCAG 2.5.8) ocupando 18 px na linha, como no layout: a sobra invade o espaço vizinho.
   const link = '-my-[3px] grid size-6 place-items-center text-foreground transition-colors hover:text-accent-text'
   const external = { target: '_blank', rel: 'noopener noreferrer' } as const
   return (
-    <div className="mt-3 flex h-[18px] flex-wrap items-center max-md:hidden">
+    <div className="mt-3 flex flex-wrap items-center max-md:hidden">
       <p className="mr-[3px] text-[15px] leading-4 font-bold">Compartilhar este NFT:</p>
       <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`} {...external} aria-label="Compartilhar no LinkedIn (abre em nova aba)" className={link}>
         <LinkedinIcon className="size-[15px]" />
