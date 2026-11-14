@@ -220,7 +220,7 @@ mínimos:
 | Detalhe desktop: adicionar ao carrinho | só COMPRAR | botão-ícone extra ao lado de COMPRAR | adicionar sem sair da página |
 | Detalhe mobile: carrinho | sem atalho | link com contador na barra superior | a barra inferior não aparece nesta rota |
 | Detalhe: edição esgotada | só riscada | riscada + "esgotada" | WCAG 1.4.1 |
-| Detalhe: miniaturas | 4 | as imagens da API (2 no seed) | conteúdo dinâmico |
+| Detalhe: rótulos "Contrato" e "Direitos autorais" | textos trocados entre os dois | cada texto sob o rótulo certo | o frame inverte endereço e royalties |
 | Carrinho desktop: edição | não aparece | só para leitor de tela | duas edições do mesmo NFT seriam idênticas |
 | Carrinho mobile: lixeira | sobre o stepper | canto superior direito do card | sobreposição do frame tornaria o alvo ambíguo |
 | Confirmação | cartão sobre fundo escuro | cartão dentro da página (header e rodapé) | rota navegável, não modal |
@@ -235,7 +235,20 @@ mínimos:
 | Carteiras: "Adicionar" | sempre visível | some com duas carteiras | o servidor recusa a terceira (`WALLET_LIMIT`) |
 | Carteiras: "Igual à carteira principal" | — | não copia apelido nem endereço | o servidor recusa endereço repetido |
 
-Lighthouse no mobile: o build de demonstração carrega a camada de mocks (MSW + seed, ~175 kB gz) antes
-do app, por causa da ordem de boot do Socket.IO; com 4G lento simulado o desempenho fica em ~0,8 (meta
-0,9 como aviso). Acessibilidade, boas práticas e SEO ficam em 100. Pré-carregar os chunks do boot
-(`modulepreload`) foi testado e piorou o LCP (disputa de banda), então ficou de fora.
+Conteúdo divergente entre frames: o seed segue o frame desktop quando os dois discordam. O carrinho
+mobile do Figma tem outros itens e quantidades (4 itens, 1/1/2/2) que o desktop (3 itens, 2/6/9), e a
+segunda linha da grade mobile do Início repete "Emerald/Sage" com outra arte e selo. Nessas telas o diff
+por pixel separa o que é conteúdo do que é layout.
+
+Lighthouse no mobile (4G lento + CPU 4x simulados), mediana de 3: início 0,88 → 0,94 e detalhe
+0,92 → 0,96, LCP ~3,2 s → ~2,6 s. A imagem LCP (arte do destaque) depende dos dados da API simulada,
+então o caminho crítico é o chunk dos mocks, que caiu de 170 para 59 kB gzip:
+- **`tldts` fora do bundle:** a lista de sufixos públicos (~100 kB gzip) só serve ao `tough-cookie`, que
+  o MSW usa para cookies; a API simulada autentica por Bearer e não usa cookies. Um alias troca o pacote
+  por `src/mocks/public-suffix.ts` (dois últimos rótulos do host).
+- **Socket.IO sob demanda:** o cliente é importado depois do primeiro render (o app já monta com o
+  worker ativo, então o WebSocket interceptado continua valendo).
+- **Boot em série mantido:** renderizar o app em paralelo com o worker e segurar só as requisições foi
+  medido e piorou o LCP (~3,9 s): a imagem LCP espera os dados de qualquer forma, e o download em
+  paralelo divide a banda com o chunk dos mocks. Pré-carregar os chunks (`modulepreload`) também piorou.
+
