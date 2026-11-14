@@ -41,7 +41,7 @@ export const test = base.extend<{ mock: Mock }>({
         await page.getByRole('button', { name: 'Entrar', exact: true }).click()
         // Desktop: menu da conta no header; mobile: atalho do perfil na barra inferior.
         await expect(
-          page.getByRole('button', { name: `${user.name.split(' ')[0]}: menu da conta` }).or(page.getByRole('link', { name: `Perfil de ${user.name}` })),
+          page.getByRole('button', { name: new RegExp(`^${user.name.split(' ')[0]} ?: menu da conta$`) }).or(page.getByRole('link', { name: `Perfil de ${user.name}` })),
         ).toBeVisible()
       },
     }
