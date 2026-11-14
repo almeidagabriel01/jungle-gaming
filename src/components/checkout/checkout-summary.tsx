@@ -127,7 +127,9 @@ export function CouponPrompt({
   onApply: (code: string) => void
   onRemove: () => void
 }) {
-  const [open, setOpen] = useState(Boolean(error))
+  const [opened, setOpen] = useState(false)
+  // Erro que chega depois (cupom da URL recusado pela cotação) abre o campo para mostrar o motivo.
+  const open = opened || Boolean(error)
   const inputId = useId()
   if (applied && !error) {
     return (
@@ -143,7 +145,7 @@ export function CouponPrompt({
     <div className="grid gap-3">
       <p className="text-center text-sm leading-4">
         Tem um código promocional?{' '}
-        <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="cursor-pointer underline-offset-4 hover:text-accent-text hover:underline">
+        <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="cursor-pointer underline-offset-4 hover:text-accent-text hover:underline">
           Aplique aqui
         </button>
       </p>

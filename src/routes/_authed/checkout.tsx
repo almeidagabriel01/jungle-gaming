@@ -183,7 +183,7 @@ function DetailsStep({
   const disconnect = useDisconnectWallet()
   const [errors, setErrors] = useState<FieldErrors>({})
   const [showCollector, setShowCollector] = useState(false)
-  const [otherWallet, setOtherWallet] = useState(false)
+  const [otherWalletChecked, setOtherWallet] = useState(false)
   const connectRef = useRef<HTMLButtonElement>(null)
   const formId = useId()
   const collectorId = useId()
@@ -191,6 +191,8 @@ function DetailsStep({
   const items = wallets.data?.items ?? []
   const primary = items.find((w) => w.role === 'primary') ?? items[0]
   const wallet = items.find((w) => w.id === draft.walletId) ?? primary
+  // Carteira restaurada do rascunho que não é a principal: a opção já aparece marcada.
+  const otherWallet = otherWalletChecked || (wallet !== undefined && wallet.id !== primary?.id)
   const values: DetailsValues & { note: string } = {
     ...EMPTY_DETAILS,
     username: user.username,
@@ -203,10 +205,15 @@ function DetailsStep({
   const parsedNetwork = Network.safeParse(values.network)
   const network = parsedNetwork.success ? parsedNetwork.data : (wallet?.network ?? 'ethereum')
 
-  const quote = useQuote({ couponCode, network })
-  // Cupom inválido ou expirado: a API responde 422 na cotação; o campo mostra o erro e permite remover.
+  const withCoupon = useQuote({ couponCode, network })
+  // Cupom inválido ou expirado: a API responde 422 na cotação; o campo mostra o erro e o resumo
+  // segue com a cotação sem cupom (como no carrinho).
   const couponError =
-    quote.error instanceof ApiError && quote.error.status === 422 ? (apiFieldErrors(quote.error).couponCode ?? quote.error.message) : undefined
+    withCoupon.error instanceof ApiError && withCoupon.error.status === 422
+      ? (apiFieldErrors(withCoupon.error).couponCode ?? withCoupon.error.message)
+      : undefined
+  const withoutCoupon = useQuote({ network, enabled: couponError !== undefined })
+  const quote = couponError ? withoutCoupon : withCoupon
 
   if (wallets.isPending) return <DetailsSkeleton />
   if (wallets.isError) return <QueryError error={wallets.error} onRetry={() => void wallets.refetch()} />
@@ -253,6 +260,8 @@ function DetailsStep({
       return
     }
     onDraft({ ...draft, walletId: wallet.id })
+    // Cupom recusado não segue para a revisão (que cotaria de novo com ele).
+    if (couponError) onCoupon(undefined)
     onContinue({ buyer: buyer.data!, wallet, network })
   }
 
@@ -317,13 +326,13 @@ function DetailsStep({
         <h2 className={sectionTitle}>Seus NFTs</h2>
         <OrderLines quote={quote.data} />
         <CouponPrompt
-          applied={couponCode}
+          applied={quote.data?.coupon?.code}
           error={couponError}
           checking={quote.isFetching}
           onApply={onCoupon}
           onRemove={() => onCoupon(undefined)}
         />
-        <OrderTotals quote={quote.data} error={couponError ? null : quote.error} onRetry={() => void quote.refetch()} />
+        <OrderTotals quote={quote.data} error={quote.error} onRetry={() => void quote.refetch()} />
       </div>
 
       {/* Mobile: "Carteira conectada" vem antes dos provedores, como no frame. */}
