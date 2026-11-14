@@ -41,20 +41,19 @@ Sobrescreva em `.env.local` se precisar.
 | `pnpm lint` | ESLint |
 | `pnpm test:e2e` | Playwright (Chromium desktop 1440 e mobile 390) contra o build; relatório em `playwright-report/` |
 | `pnpm test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
-| `pnpm test:e2e visual --update-snapshots` | Regera as baselines de regressão visual (início, detalhe, carrinho e pagamento em 1440 e 390); gere no Linux, mesmo ambiente do CI |
+| `pnpm test:e2e visual --update-snapshots` | Regera as baselines de regressão visual (início, detalhe, carrinho, pagamento, login e perfil em 1440 e 390); gere no Linux, mesmo ambiente do CI |
 | `pnpm lighthouse` | Build + Lighthouse CI (início e detalhe, mobile e desktop, 3 execuções, mediana); falha abaixo das metas (perf 90, a11y 95, boas práticas 95, SEO 90); relatórios em `.lighthouseci/` |
 
-## Deploy
+## Deploy (Vercel)
 
-O build é uma SPA estática em `dist/`, independente do host. Configure com build `pnpm build`, saída `dist`
-e Node 22+.
+SPA estática em `dist/`, configurada no `vercel.json`: build `pnpm build`, saída `dist`, Node 22+.
 
-- **Mocks:** vêm ligados pelo `.env` versionado (`VITE_ENABLE_MOCKS=true`). Uma variável de ambiente
-  definida no host tem prioridade sobre ele.
-- **Rotas internas:** no Vercel, o rewrite do `vercel.json` só entra depois dos arquivos estáticos. No
-  Cloudflare Pages, a ausência de `404.html` em `dist/` ativa o modo SPA; não adicione esse arquivo.
-- **Service worker:** `mockServiceWorker.js` é servido na raiz, sem cache, nos dois hosts (`vercel.json` e
-  `public/_headers`). `/assets/*`, com hash no nome, recebe cache longo e imutável.
+- **Mocks:** ligados pelo `.env` versionado (`VITE_ENABLE_MOCKS=true`), então o build de demonstração já
+  sobe com MSW. Uma variável definida no projeto da Vercel tem prioridade sobre ele.
+- **Rotas internas:** o rewrite para `/index.html` só entra depois dos arquivos estáticos, então
+  `mockServiceWorker.js`, `robots.txt` e `/assets/*` continuam servidos como arquivo.
+- **Cache:** `mockServiceWorker.js` sem cache (o worker atualiza a cada deploy); `/assets/*`, com hash no
+  nome, cache longo e imutável.
 
 ## Credenciais fictícias
 
