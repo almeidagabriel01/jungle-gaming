@@ -8,7 +8,7 @@ import type { Db, DbNft, DbOrder } from './db'
  * Seed determinístico: sem Math.random nem Date.now. Mudou o seed → suba SEED_VERSION,
  * o que descarta o estado salvo no navegador (evita estado velho após redeploy).
  */
-export const SEED_VERSION = 4
+export const SEED_VERSION = 5
 
 /** Credenciais fictícias (documentadas no README). Senhas guardadas só como SHA-256 com salt. */
 export const SEED_USERS = {
@@ -165,8 +165,8 @@ function createNfts(): DbNft[] {
     const networkName = { ethereum: 'Ethereum', polygon: 'Polygon', solana: 'Solana' }[network]
     const contract =
       network === 'solana'
-        ? { address: base58(rand, 44), standard: 'Metaplex' }
-        : { address: n === 1 ? '0x7A42c9d1e5f03b8a6c2d4e7f9a1b3c5d7e8f19E8' : `0x${hex(rand, 40)}`, standard: 'ERC-721' }
+        ? { address: base58(rand, 44), standard: 'Metaplex', metadataStorage: 'Arweave' as const, verified: true }
+        : { address: n === 1 ? '0x7A42c9d1e5f03b8a6c2d4e7f9a1b3c5d7e8f19E8' : `0x${hex(rand, 40)}`, standard: 'ERC-721', metadataStorage: 'IPFS' as const, verified: true }
     // Maior tiragem numerada ("obra digital 1/50"); a edição Aberta não tem número.
     const firstEdition = editions.findLast((e) => e.name !== 'Aberta')!.name
     return {

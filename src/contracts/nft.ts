@@ -36,7 +36,8 @@ export const Nft = z.object({
   collection: z.object({ id: Id, name: z.string() }),
   creator: z.object({ name: z.string() }),
   network: Network,
-  contract: z.object({ address: z.string(), standard: z.string() }),
+  /** Onde ficam os metadados do token e se o contrato tem código verificado no explorador. */
+  contract: z.object({ address: z.string(), standard: z.string(), metadataStorage: z.enum(['IPFS', 'Arweave']), verified: z.boolean() }),
   royaltyPercent: z.number().min(0).max(100),
   attributes: z.array(z.string()),
   rarity: Rarity,

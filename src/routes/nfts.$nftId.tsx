@@ -430,15 +430,19 @@ function DetailTabs({ nft }: { nft: Nft }) {
       <Tabs.Content value="details" className="animate-fade pt-3">
         <p className="text-sm leading-6 whitespace-pre-line text-muted-foreground">{nft.description}</p>
         <dl className="mt-3 grid gap-3">
-          {item('Rede:', `Cunhado na ${NETWORK_LABEL[nft.network]} com procedência imutável e metadados armazenados no IPFS.`)}
+          {item('Rede:', `Cunhado na ${NETWORK_LABEL[nft.network]} com procedência imutável e metadados armazenados no ${nft.contract.metadataStorage}.`)}
           {item(
             'Contrato:',
             <>
               <span aria-hidden="true">{shortAddress(nft.contract.address)}</span>
-              <span className="sr-only">{nft.contract.address}</span> • Contrato inteligente {nft.contract.standard} verificado.
+              <span className="sr-only">{nft.contract.address}</span> • Contrato inteligente {nft.contract.standard}
+              {nft.contract.verified ? ' verificado' : ''}.
             </>,
           )}
-          {item('Direitos autorais:', `${String(nft.royaltyPercent).replace('.', ',')}% nas vendas secundárias, pagos automaticamente pelos mercados compatíveis.`)}
+          {item(
+            'Direitos autorais:',
+            `${String(nft.royaltyPercent).replace('.', ',')}% nas vendas secundárias para ${nft.creator.name}, pagos automaticamente pelos mercados compatíveis.`,
+          )}
         </dl>
       </Tabs.Content>
       <Tabs.Content value="reviews" className="animate-fade pt-4">
