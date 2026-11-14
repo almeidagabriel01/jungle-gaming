@@ -6,7 +6,7 @@ type Crumb = { label: string; link?: Pick<LinkProps, 'to' | 'params' | 'search' 
 /** Trilha "Início / Mercado / …" do layout desktop; o último item é a página atual. */
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
-    <nav aria-label="Trilha de navegação" className="pt-8 pb-1 text-[15px] font-bold max-md:hidden">
+    <nav aria-label="Trilha de navegação" className="pt-8 pb-1 text-[15px] leading-4 font-bold max-md:hidden">
       <ol className="flex flex-wrap items-center gap-2">
         {items.map((item, i) => (
           <Fragment key={item.label}>
