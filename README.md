@@ -41,7 +41,8 @@ Sobrescreva em `.env.local` se precisar.
 | `pnpm lint` | ESLint |
 | `pnpm test:e2e` | Playwright (Chromium desktop 1440 e mobile 390) contra o build; relatório em `playwright-report/` |
 | `pnpm test:e2e:report` | Abre o relatório HTML (traces das falhas incluídos) |
-| `pnpm lighthouse` | Build + Lighthouse CI (início e detalhe, mobile e desktop, 3 execuções); relatórios em `.lighthouseci/` |
+| `pnpm test:e2e visual --update-snapshots` | Regera as baselines de regressão visual (início, detalhe, carrinho e pagamento em 1440 e 390); gere no Linux, mesmo ambiente do CI |
+| `pnpm lighthouse` | Build + Lighthouse CI (início e detalhe, mobile e desktop, 3 execuções, mediana); falha abaixo das metas (perf 90, a11y 95, boas práticas 95, SEO 90); relatórios em `.lighthouseci/` |
 
 ## Deploy
 

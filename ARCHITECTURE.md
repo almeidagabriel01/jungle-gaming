@@ -174,8 +174,8 @@ publicados após persistir.
 ## Decisões e desvios
 
 - **MSW 2.15 em vez de 3.x:** exigência de peer do `@mswjs/socket.io-binding` publicado.
-- **Contrato derivado do Figma, telas na fase 2:** dados, filtros e campos seguem o layout; as telas atuais
-  são estrutura semântica funcional, sem o visual final.
+- **Contrato e telas derivados do Figma:** dados, filtros, campos e visual seguem o layout (valores em px do
+  `file.json`/API do Figma). Os desvios estão listados em "Fidelidade ao Figma".
 - **"Coleções" × coleção:** a lateral "Coleções" do layout (Arte digital, Música…) é `category`; a coleção do
   projeto ("Coleção: Kurio Apes" no detalhe) é `collection`, filtrável por id para "Mais desta coleção".
 - **Facetas:** a contagem de cada opção aplica todos os outros filtros, menos o próprio grupo; a faixa de
@@ -186,3 +186,56 @@ publicados após persistir.
 - **Preços em ETH em todas as redes:** como no layout; Polygon e Solana não usam unidade própria.
 - **Sem runner de teste unitário:** as regras de negócio do mock e de dinheiro são exercitadas pelos E2E
   através dos handlers MSW, como pede o enunciado.
+
+## Fidelidade ao Figma
+
+Medidas, cores, fontes, raios, sombras e textos vêm do arquivo do Figma (nunca a olho); os ícones de
+interface são os vetores Iconly do próprio arquivo, gerados da geometria (`geometry=paths`) em
+`src/components/icons/`. Cada tela foi comparada por pixel com o PNG do frame (1440 e 414×896).
+Telas e estados que o Figma não tem (carregando, erro, vazio, 404, pendente, recusado, tablet) usam os
+mesmos tokens e componentes.
+
+Desvios, todos exigidos pelo enunciado (acessibilidade AA, alvos de toque, estado não só por cor) e
+mínimos:
+
+| Onde | Figma | Implementado | Motivo |
+|---|---|---|---|
+| Bordas de campos | `#3F2319` (1,5:1) | `#8A6744` | WCAG 1.4.11: contorno de componente ≥ 3:1 |
+| Filtros (Coleções, Rede) | seleção só pela cor laranja | caixa de seleção de 16 px à esquerda | WCAG 1.4.1: estado não só por cor |
+| Pontos do carrossel | 8/7 px a cada 16/13 px | mesmos pontos, passo de 24 px | WCAG 2.5.8: alvo ≥ 24 px |
+| Slider de preço | controle de 21 px de altura | área de 24 px (polegar igual) | WCAG 2.5.8 |
+| Lupa do header | 20×20 | alvo 24×35 (ícone igual) | WCAG 2.5.8 |
+| "Aplicar" do cupom (mobile) | texto `#F5F1EB` no gradiente (≈2,5:1) | texto `#140D0A` | WCAG 1.4.3 |
+| Tempo real | sem indicador | região `role=status` só para leitor de tela | live region pedida no enunciado |
+| Ações fora do escopo (Criadores, newsletter, redes, "Ler mais") | links | botões que avisam "não disponível nesta demonstração" | sem link morto |
+| Busca no desktop | lupa sem destino definido | abre um diálogo de busca que compõe com os filtros | a busca do catálogo precisa de campo |
+| Filtros no mobile | botão de filtro sem tela | gaveta com filtros e ordenação | o frame mobile não mostra a lateral |
+| Tablet (768–1023) | sem frame | estrutura mobile com cards do desktop | as medidas fixas do desktop só cabem a partir de 1024 |
+| Coração nos cards mobile | só no 1º card | em todos os cards | ação consistente por item |
+| Login/Cadastro: olho da senha (mobile) | `#55321F` (≈1,6:1) | `#B39463` | WCAG 1.4.11 |
+| Login/Cadastro: fechar, mostrar senha | ícone de 18 px | alvo de 24 px | WCAG 2.5.8 |
+| Login/Cadastro: "Crie uma conta" / "Entre" (mobile) | só cor | sublinhados | WCAG 1.4.1 |
+| Cadastro desktop: "Confirmar senha" | sem olho | com olho, como no frame mobile | mesma ação nos dois campos |
+| Detalhe: trilha | Início › Mercado | + nome do NFT | contexto da página atual |
+| Detalhe desktop: adicionar ao carrinho | só COMPRAR | botão-ícone extra ao lado de COMPRAR | adicionar sem sair da página |
+| Detalhe mobile: carrinho | sem atalho | link com contador na barra superior | a barra inferior não aparece nesta rota |
+| Detalhe: edição esgotada | só riscada | riscada + "esgotada" | WCAG 1.4.1 |
+| Detalhe: miniaturas | 4 | as imagens da API (2 no seed) | conteúdo dinâmico |
+| Carrinho desktop: edição | não aparece | só para leitor de tela | duas edições do mesmo NFT seriam idênticas |
+| Carrinho mobile: lixeira | sobre o stepper | canto superior direito do card | sobreposição do frame tornaria o alvo ambíguo |
+| Confirmação | cartão sobre fundo escuro | cartão dentro da página (header e rodapé) | rota navegável, não modal |
+| Pagamento: conexão da carteira | sem estado de conexão | status + "Conectar/Desconectar carteira" sob "Carteira e rede" | simular conexão, recusa e desconexão |
+| Pagamento: envio | um botão | "Revisar pedido" → revisão → "Confirmar compra (total)" | confirmação explícita antes de pagar |
+| Pagamento mobile: dados do colecionador | não aparecem | seção recolhível "Perfil do colecionador", aberta quando há erro | o pedido exige esses campos |
+| Pagamento: faixa METAMASK • WALLETCONNECT • COINBASE | rádio sem significado | opção WalletConnect | cada rádio escolhe uma carteira |
+| Pagamento: nome ENS | só o seletor `.eth` | seletor + campo de texto | o nome precisa ser digitado |
+| Pagamento: endereço da carteira | editável | só leitura; troca em "Usar outra carteira?" | o endereço é o da carteira que paga |
+| Perfil/Carteiras: labels "ENS ou carteira secundária" e dica de senha | só placeholder | label/dica para leitor de tela | WCAG 1.3.1/3.3.2 |
+| Perfil: olho da senha | só o estado oculto | estado visível com o mesmo ícone sem o risco | estado que o Figma não tem |
+| Carteiras: "Adicionar" | sempre visível | some com duas carteiras | o servidor recusa a terceira (`WALLET_LIMIT`) |
+| Carteiras: "Igual à carteira principal" | — | não copia apelido nem endereço | o servidor recusa endereço repetido |
+
+Lighthouse no mobile: o build de demonstração carrega a camada de mocks (MSW + seed, ~175 kB gz) antes
+do app, por causa da ordem de boot do Socket.IO; com 4G lento simulado o desempenho fica em ~0,8 (meta
+0,9 como aviso). Acessibilidade, boas práticas e SEO ficam em 100. Pré-carregar os chunks do boot
+(`modulepreload`) foi testado e piorou o LCP (disputa de banda), então ficou de fora.
