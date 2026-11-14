@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { io, type Socket } from 'socket.io-client'
+import type { io as Io, Socket } from 'socket.io-client'
 import { keys } from '@/api/keys'
 import type { Cart } from '@/contracts/cart'
 import { RealtimeEvent, type NftUpdatedEvent, type OrderUpdatedEvent } from '@/contracts/events'
@@ -122,7 +122,7 @@ function reconcile(qc: QueryClient) {
 }
 
 /** `resumed`: substitui um socket anterior; eventos perdidos na troca são reconciliados na conexão. */
-function connect(qc: QueryClient, resumed = false): Socket {
+function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
   const token = sessionStore.get()?.tokens.accessToken
   const socket = io({
     path: '/socket.io',
@@ -160,20 +160,43 @@ function connect(qc: QueryClient, resumed = false): Socket {
 
 /** Inicia o tempo real e o mantém alinhado à sessão. Devolve a função de encerramento. */
 export function startRealtime(qc: QueryClient): () => void {
-  let socket = connect(qc)
+  let socket: Socket | null = null
+  let stopped = false
+  // Cada abertura invalida as anteriores ainda pendentes (troca de sessão durante o carregamento).
+  let generation = 0
+  const close = () => {
+    if (!socket) return
+    socket.removeAllListeners()
+    socket.io.removeAllListeners()
+    socket.disconnect()
+    socket = null
+  }
+  // Cliente carregado sob demanda, fora do chunk do primeiro render. O app só monta depois do worker
+  // do MSW (main.tsx), então o engine.io já captura o WebSocket interceptado ao avaliar o módulo.
+  const open = async (resumed: boolean) => {
+    const current = ++generation
+    setStatus('connecting')
+    const { io } = await import('socket.io-client')
+    if (stopped || current !== generation) return
+    close()
+    socket = connect(io, qc, resumed)
+  }
+  const start = (resumed: boolean) => {
+    open(resumed).catch(() => {
+      if (!stopped) setStatus('disconnected')
+    })
+  }
+  start(false)
   const unsubscribe = sessionStore.subscribe((next, prev) => {
     // O servidor resolve o usuário no handshake: token novo (login, troca, refresh) exige nova conexão.
     if (next?.tokens.accessToken === prev?.tokens.accessToken) return
-    socket.removeAllListeners()
-    socket.io.removeAllListeners()
-    socket.disconnect()
-    socket = connect(qc, true)
+    close()
+    start(true)
   })
   return () => {
+    stopped = true
     unsubscribe()
-    socket.removeAllListeners()
-    socket.io.removeAllListeners()
-    socket.disconnect()
+    close()
     setStatus('disconnected')
   }
 }

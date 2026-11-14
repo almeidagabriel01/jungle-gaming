@@ -12,7 +12,11 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Camada de mocks: lista de sufixos públicos sem uso (ver src/mocks/public-suffix.ts).
+      tldts: fileURLToPath(new URL('./src/mocks/public-suffix.ts', import.meta.url)),
+    },
   },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
