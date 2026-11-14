@@ -19,7 +19,7 @@ import { announce, dismissNotice, useNotices } from '@/lib/announcer'
 import { apiFieldErrors, formValues } from '@/lib/forms'
 import { formatEth } from '@/lib/money'
 import { useCart, useQuote, useRemoveCartItem, useUpdateCartItem } from '@/queries/cart'
-import { useFeaturedNfts } from '@/queries/catalog'
+import { useFeaturedNfts, useRelatedNfts } from '@/queries/catalog'
 
 export const Route = createFileRoute('/cart')({
   validateSearch: z.object({ coupon: z.string().trim().toUpperCase().max(32).optional().catch(undefined) }),
@@ -41,7 +41,13 @@ function CartPage() {
   // Cupom recusado (inválido/expirado): o erro fica no campo e os valores vêm da cotação sem cupom.
   const withoutCoupon = useQuote({ network: 'ethereum', enabled: hasItems && couponError !== undefined })
   const quote = couponError ? withoutCoupon : withCoupon
+  // Como no layout: a coleção do primeiro item; com o carrinho vazio, os destaques do catálogo.
+  const firstNftId = cart.data?.items[0]?.nftId
+  const related = useRelatedNfts(firstNftId)
   const featured = useFeaturedNfts()
+  const suggestions = firstNftId
+    ? { items: related.items, loading: related.isPending }
+    : { items: featured.data?.items ?? (featured.isError ? [] : undefined), loading: cart.isPending || featured.isPending }
 
   return (
     <div className="page max-md:px-7">
@@ -128,7 +134,7 @@ function CartPage() {
       )}
 
       <div className="mt-16 md:mt-24">
-        <NftRail title="Colecionadores também viram" items={featured.data?.items ?? (featured.isError ? [] : undefined)} loading={featured.isPending} />
+        <NftRail title="Colecionadores também viram" items={suggestions.items} loading={suggestions.loading} />
       </div>
     </div>
   )

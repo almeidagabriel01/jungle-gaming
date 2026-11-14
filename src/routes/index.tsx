@@ -80,7 +80,7 @@ function HomePage() {
           <ul className={`stagger ${GRID}`}>
             {list.data.items.map((nft, i) => (
               <li key={nft.id}>
-                <NftCard nft={nft} index={i} priority={i < 3} favorite={!desktop} />
+                <NftCard nft={nft} index={i} priority={i < 3} favorite={!desktop} artAlign={desktop ? 'center' : i % 2 === 0 ? 'start' : 'end'} />
               </li>
             ))}
           </ul>
@@ -120,7 +120,8 @@ function HomePage() {
             <h2 id="mercado-title" className="sr-only">
               Mercado
             </h2>
-            <CatalogTabs value={search.tab} onChange={(tab) => update({ tab })} className="pb-px" />
+            {/* pb-px: o fio de 2 px sai 1 px abaixo das abas sem ser cortado pela rolagem; -mb-px mantém a grade a 16 px do texto. */}
+            <CatalogTabs value={search.tab} onChange={(tab) => update({ tab })} className="-mb-px pb-px" />
             {results}
           </section>
           <div className="mx-auto mt-8 w-full max-w-[400px]">

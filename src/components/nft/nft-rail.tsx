@@ -3,10 +3,10 @@ import { cn } from 'cn'
 import type { Nft } from '@/contracts/nft'
 import { NftCard, NftCardSkeleton } from './nft-card'
 
-/** Título de seção do layout: laranja, com fio inferior ("Mais desta coleção"). */
+/** Título de seção do layout: laranja 17/16, fio inferior a 12 px ("Mais desta coleção"). */
 export function SectionHeading({ id, children }: { id: string; children: string }) {
   return (
-    <h2 id={id} className="border-b border-border-soft pb-3 text-lg font-bold text-accent-text">
+    <h2 id={id} className="border-b border-primary/30 pb-3 text-[17px] leading-4 font-bold text-accent-text">
       {children}
     </h2>
   )
@@ -51,22 +51,24 @@ export function NftRail({ title, items, loading = false }: { title: string; item
         onScroll={measure}
         tabIndex={0}
         aria-label={title}
-        className="-mx-1 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // Respiro de 4/8 px para o anel de foco dos cards, compensado na margem (não altera o espaçamento do layout).
+        className="-mx-1 -mb-2 flex snap-x snap-mandatory scroll-px-1 gap-6 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] lg:gap-[26px] [&::-webkit-scrollbar]:hidden"
       >
         {loading || !items
           ? Array.from({ length: 5 }, (_, i) => (
-              <li key={i} className="w-[calc(50%-12px)] shrink-0 snap-start md:w-[calc(33.333%-16px)] lg:w-[calc(20%-19.2px)]">
+              <li key={i} className="w-[calc(50%-12px)] shrink-0 snap-start md:w-[calc(33.333%-16px)] lg:w-[calc(20%-20.8px)]">
                 <NftCardSkeleton />
               </li>
             ))
           : items.map((nft, i) => (
-              <li key={nft.id} className="w-[calc(50%-12px)] shrink-0 snap-start md:w-[calc(33.333%-16px)] lg:w-[calc(20%-19.2px)]">
-                <NftCard nft={nft} index={i} />
+              <li key={nft.id} className="w-[calc(50%-12px)] shrink-0 snap-start md:w-[calc(33.333%-16px)] lg:w-[calc(20%-20.8px)]">
+                <NftCard nft={nft} index={i} compact />
               </li>
             ))}
       </ul>
       {pages > 1 && (
-        <div className="flex justify-center gap-1">
+        // Pontos de 12 px como no layout; o alvo de 24 px (WCAG 2.5.8) transborda para os espaços vizinhos.
+        <div className="-my-1.5 flex justify-center gap-1">
           {Array.from({ length: pages }, (_, i) => (
             <button
               key={i}

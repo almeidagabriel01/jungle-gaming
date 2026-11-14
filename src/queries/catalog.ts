@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/endpoints'
 import { keys } from '@/api/keys'
-import type { Favorites, Nft, NftSearch } from '@/contracts/nft'
+import { NFT_SEARCH_DEFAULTS, type Favorites, type Nft, type NftSearch } from '@/contracts/nft'
 import { announce } from '@/lib/announcer'
 import { useUser } from '@/session/session'
 
@@ -11,12 +11,13 @@ const CATALOG_STALE_MS = 30_000
  * Catálogo: a chave inclui todos os parâmetros (isolamento por consulta) e o `signal`
  * cancela a request anterior — resposta fora de ordem nunca sobrescreve a atual.
  */
-export const useNftList = (search: NftSearch) =>
+export const useNftList = (search: NftSearch, { enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({
     queryKey: keys.nftList(search),
     queryFn: ({ signal }) => api.nfts.list(search, signal),
     placeholderData: keepPreviousData,
     staleTime: CATALOG_STALE_MS,
+    enabled,
   })
 
 export const useFeaturedNfts = () =>
@@ -29,6 +30,21 @@ export const nftQuery = (nftId: string) => ({
 })
 
 export const useNft = (nftId: string) => useQuery(nftQuery(nftId))
+
+/**
+ * "Mais desta coleção": a primeira página da coleção do NFT, sem ele mesmo. No detalhe o NFT já
+ * está no cache; `undefined` (carrinho vazio) desliga as buscas.
+ */
+export function useRelatedNfts(nftId: string | undefined) {
+  const anchor = useQuery({ ...nftQuery(nftId ?? ''), enabled: nftId !== undefined })
+  const collection = anchor.data?.collection.id
+  const list = useNftList({ ...NFT_SEARCH_DEFAULTS, collection: collection ?? '' }, { enabled: collection !== undefined })
+  const isError = anchor.isError || list.isError
+  return {
+    items: isError ? [] : list.data?.items.filter((n) => n.id !== nftId),
+    isPending: nftId !== undefined && !isError && list.isPending,
+  }
+}
 
 export const useFavorites = () => {
   const user = useUser()

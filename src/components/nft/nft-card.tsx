@@ -21,6 +21,8 @@ export function NftCard({
   index = 0,
   priority = false,
   favorite = false,
+  compact = false,
+  artAlign = 'center',
   className,
 }: {
   nft: Nft
@@ -30,13 +32,23 @@ export function NftCard({
   priority?: boolean
   /** Coração no canto (layout mobile do catálogo). */
   favorite?: boolean
+  /** Tipografia dos carrosséis do layout em todas as larguras: nome 15/20 e preço 16/16, sem espaço entre eles. */
+  compact?: boolean
+  /** Grade mobile do layout: arte no alto na coluna esquerda e embaixo na direita (12/20 px). */
+  artAlign?: 'start' | 'center' | 'end'
   className?: string
 }) {
   const image = nft.images[0]!
   const soldOut = nft.available === 0
   return (
     <article style={{ '--i': index } as CSSProperties} className={cn('group relative grid content-start gap-2 md:gap-3', className)}>
-      <div className="relative flex aspect-[175/200] items-center overflow-hidden rounded-[20px] bg-linear-to-b from-card to-raised px-1 md:aspect-[258/300] md:rounded-none md:bg-card md:bg-none">
+      <div
+        className={cn(
+          'relative flex aspect-[175/200] items-center overflow-hidden rounded-[20px] bg-linear-to-b from-card to-raised px-1 md:aspect-[258/300] md:items-center md:rounded-none md:bg-card md:bg-none md:py-0',
+          artAlign === 'start' && 'items-start pt-3',
+          artAlign === 'end' && 'items-end pb-3',
+        )}
+      >
         <img
           src={image.thumbnailUrl}
           srcSet={`${image.thumbnailUrl} 480w, ${image.url} 960w`}
@@ -61,8 +73,8 @@ export function NftCard({
           <span className="absolute right-3 bottom-3 rounded-md bg-background/90 px-2 py-1 text-[13px] leading-4 font-medium uppercase">Esgotado</span>
         )}
       </div>
-      <div className="grid gap-0 pl-2 md:gap-1.5 md:pl-0">
-        <h3 className="text-[15px] leading-5 md:text-base md:leading-4">
+      <div className={cn('grid gap-0 pl-2 md:pl-0', !compact && 'md:gap-1.5')}>
+        <h3 className={cn('text-[15px] leading-5', !compact && 'md:text-base md:leading-4')}>
           <Link
             to="/nfts/$nftId"
             params={{ nftId: nft.id }}
@@ -71,7 +83,7 @@ export function NftCard({
             {nft.name}
           </Link>
         </h3>
-        <Price value={nft.minPrice} compareAt={compareAtOf(nft)} className="text-base leading-4 md:text-lg" />
+        <Price value={nft.minPrice} compareAt={compareAtOf(nft)} className={cn('text-base leading-4', !compact && 'md:text-lg')} />
       </div>
       {favorite && <FavoriteButton nft={nft} variant="icon" className="absolute top-3 right-2.5 z-10" />}
     </article>
