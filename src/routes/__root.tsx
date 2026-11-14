@@ -1,13 +1,15 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, Link, Outlet, useRouter } from '@tanstack/react-router'
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
 import { useNotices } from '@/lib/announcer'
-import { useCart } from '@/queries/cart'
-import { realtimeStatus } from '@/realtime/realtime'
-import { ensureSession, useLogout, useUser } from '@/session/session'
+import { MobileNav } from '@/components/layout/mobile-nav'
+import { SiteFooter } from '@/components/layout/site-footer'
+import { SiteHeader } from '@/components/layout/site-header'
+import { useShowsMobileNav } from '@/components/layout/use-shows-mobile-nav'
+import { ensureSession } from '@/session/session'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // Recupera e valida a sessão salva antes da primeira tela (refresh mantém o login).
@@ -17,66 +19,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 })
 
 function RootLayout() {
+  const showsMobileNav = useShowsMobileNav()
   return (
     <>
-      <a href="#conteudo" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-background focus:p-2">
+      <a
+        href="#conteudo"
+        className="sr-only z-50 rounded-sm bg-primary px-4 py-2 font-bold text-primary-foreground focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
+      >
         Pular para o conteúdo
       </a>
-      <Header />
-      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 py-6 outline-none">
+      <SiteHeader />
+      <main id="conteudo" tabIndex={-1} className={showsMobileNav ? 'pb-24 outline-none md:pb-0' : 'outline-none'}>
         <Outlet />
       </main>
+      <SiteFooter />
+      {showsMobileNav && <MobileNav />}
       <NoticesToToasts />
       <Toaster position="top-right" />
     </>
-  )
-}
-
-function Header() {
-  const user = useUser()
-  const cart = useCart()
-  const logout = useLogout()
-  const router = useRouter()
-  const count = cart.data?.items.reduce((sum, i) => sum + i.quantity, 0) ?? 0
-  const status = useSyncExternalStore(realtimeStatus.subscribe, realtimeStatus.get)
-
-  return (
-    <header className="border-b">
-      <nav aria-label="Principal" className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-        <Link to="/" className="font-semibold">
-          Kurio
-        </Link>
-        <Link to="/cart" aria-label={`Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`}>
-          Carrinho ({count})
-        </Link>
-        {user ? (
-          <>
-            <Link to="/favorites">Favoritos</Link>
-            <Link to="/profile">Perfil</Link>
-            <Link to="/wallets">Carteiras</Link>
-            <span className="text-sm text-muted-foreground">Olá, {user.name}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={logout.isPending}
-              onClick={() => {
-                logout.mutate(undefined, { onSuccess: () => void router.navigate({ to: '/' }) })
-              }}
-            >
-              Sair
-            </Button>
-          </>
-        ) : (
-          <>
-            <Link to="/login">Entrar</Link>
-            <Link to="/register">Criar conta</Link>
-          </>
-        )}
-        <span className="ml-auto text-xs text-muted-foreground" data-testid="realtime-status">
-          Tempo real: {status === 'connected' ? 'conectado' : status === 'connecting' ? 'conectando' : 'desconectado'}
-        </span>
-      </nav>
-    </header>
   )
 }
 
@@ -97,14 +57,15 @@ function NoticesToToasts() {
 
 function NotFound() {
   return (
-    <section aria-labelledby="nf-title" className="grid gap-3">
-      <h1 id="nf-title" className="text-2xl font-semibold">
+    <section aria-labelledby="nf-title" className="page grid justify-items-start gap-4 py-24">
+      <p className="text-sm font-bold tracking-[0.2em] text-accent-text">ERRO 404</p>
+      <h1 id="nf-title" className="text-3xl font-bold md:text-[43px] md:leading-[70px]">
         Página não encontrada
       </h1>
-      <p>O endereço acessado não existe.</p>
-      <Link to="/" className="underline">
-        Voltar ao início
-      </Link>
+      <p className="text-muted-foreground">O endereço acessado não existe ou foi removido.</p>
+      <Button asChild>
+        <Link to="/">Voltar ao início</Link>
+      </Button>
     </section>
   )
 }

@@ -15,6 +15,9 @@ export const useCart = () => {
   return useQuery({ queryKey: keys.cart(owner), queryFn: ({ signal }) => api.cart.get(signal), refetchOnWindowFocus: true })
 }
 
+/** Unidades no carrinho (badge do header e da barra mobile). */
+export const useCartCount = () => useCart().data?.items.reduce((sum, i) => sum + i.quantity, 0) ?? 0
+
 /** Mutations do carrinho: a resposta da API é o novo carrinho; a cotação é recalculada. */
 function useCartMutation<V>(fn: (vars: V) => Promise<Cart>) {
   const qc = useQueryClient()
