@@ -1,30 +1,40 @@
-import { createFileRoute, Link, stripSearchParams } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { CatalogFilters } from '@/components/home/catalog-filters'
+import { CATALOG_PANEL_ID, tabId } from '@/components/home/catalog-ids'
+import { CatalogTabs, Pagination, SortSelect } from '@/components/home/catalog-toolbar'
+import { Journal, PromoBanners } from '@/components/home/editorial'
+import { FeaturedOffer } from '@/components/home/featured-offer'
+import { HeroDesktop, HeroMobile } from '@/components/home/hero'
+import { FilterIcon, SearchFieldIcon } from '@/components/icons/shell-icons'
+import { NftCard, NftCardSkeleton } from '@/components/nft/nft-card'
 import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Eth } from '@/contracts/common'
-import { Network } from '@/contracts/common'
-import { Category, NFT_SEARCH_DEFAULTS, NftSearch, NftSort, NftTab, type Nft, type NftFacets } from '@/contracts/nft'
-import { CATEGORY_LABEL, NETWORK_LABEL, SORT_LABEL, TAB_LABEL } from '@/lib/labels'
-import { formValues } from '@/lib/forms'
-import { eth, formatEth } from '@/lib/money'
-import { useFeaturedNfts, useNftList } from '@/queries/catalog'
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { NFT_SEARCH_DEFAULTS, NftSearch, PAGE_SIZE } from '@/contracts/nft'
+import { useMediaQuery, WIDE_QUERY } from '@/lib/use-media-query'
+import { useNftList } from '@/queries/catalog'
 
 export const Route = createFileRoute('/')({
   validateSearch: NftSearch,
   search: { middlewares: [stripSearchParams(NFT_SEARCH_DEFAULTS)] },
-  component: CatalogPage,
+  component: HomePage,
 })
 
-function CatalogPage() {
+/**
+ * Frame "Desktop / Início" (seções Top, Products, Promos, Blog com gap 96) e "Mobile / Início".
+ * Desktop (≥ lg) e mobile têm estruturas diferentes; o media query monta só uma (sem rótulos duplicados).
+ * No tablet vale a estrutura mobile com os cards do desktop.
+ */
+function HomePage() {
+  const desktop = useMediaQuery(WIDE_QUERY)
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const list = useNftList(search)
 
   /** Qualquer mudança de filtro reinicia a paginação; só a paginação preserva a página. */
   const update = useCallback(
-    (patch: Partial<NftSearch>) => void navigate({ search: (prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }) }),
+    (patch: Partial<NftSearch>) => void navigate({ search: (prev) => ({ ...prev, ...patch, page: patch.page ?? 1 }), hash: 'mercado' }),
     [navigate],
   )
 
@@ -34,299 +44,159 @@ function CatalogPage() {
     if (lastPage) void navigate({ search: (prev) => ({ ...prev, page: lastPage }), replace: true })
   }, [lastPage, navigate])
 
-  return (
-    <div className="grid gap-8">
-      <Featured />
-
-      <section aria-labelledby="catalog-title" className="grid gap-4">
-        <h1 id="catalog-title" className="text-2xl font-semibold">
-          Catálogo
-        </h1>
-        <Filters search={search} facets={list.data?.facets} onChange={update} />
-
-        <div aria-live="polite" className="text-sm text-muted-foreground" data-testid="catalog-summary">
-          {list.data && `${list.data.total} ${list.data.total === 1 ? 'resultado' : 'resultados'}`}
-          {list.isFetching && list.data ? ' · atualizando…' : ''}
-        </div>
-
-        {list.isPending ? (
-          <GridSkeleton />
-        ) : list.isError ? (
-          <QueryError error={list.error} onRetry={() => void list.refetch()} title="Não foi possível carregar o catálogo" />
-        ) : list.data.total === 0 ? (
-          <div className="grid justify-items-start gap-3 rounded-lg border p-6">
-            <p>Nenhum NFT encontrado com esses filtros.</p>
-            <Button variant="outline" onClick={() => void navigate({ search: NFT_SEARCH_DEFAULTS })}>
-              Limpar filtros
-            </Button>
-          </div>
-        ) : (
-          <>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-busy={list.isFetching} data-testid="catalog-grid">
-              {list.data.items.map((nft) => (
-                <li key={nft.id}>
-                  <NftCard nft={nft} />
-                </li>
-              ))}
-            </ul>
-            <Pagination page={list.data.page} totalPages={list.data.totalPages} onPage={(page) => update({ page })} />
-          </>
-        )}
-      </section>
-    </div>
-  )
-}
-
-function Featured() {
-  const featured = useFeaturedNfts()
-  return (
-    <section aria-labelledby="featured-title" className="grid gap-3">
-      <h2 id="featured-title" className="text-xl font-semibold">
-        Destaques
-      </h2>
-      {featured.isPending ? (
-        <GridSkeleton count={4} />
-      ) : featured.isError ? (
-        <QueryError error={featured.error} onRetry={() => void featured.refetch()} />
-      ) : (
-        <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {featured.data.items.map((nft) => (
-            <li key={nft.id}>
-              <NftCard nft={nft} />
+  const results = (
+    <div
+      id={CATALOG_PANEL_ID}
+      role="tabpanel"
+      aria-labelledby={tabId(search.tab)}
+      aria-busy={list.isFetching}
+      data-testid="catalog-grid"
+      className="grid gap-[88px] max-md:gap-10"
+    >
+      <p aria-live="polite" className="sr-only" data-testid="catalog-summary">
+        {list.data && `${list.data.total} ${list.data.total === 1 ? 'resultado' : 'resultados'}`}
+        {list.isFetching && list.data ? ' · atualizando…' : ''}
+      </p>
+      {list.isPending ? (
+        <ul aria-label="Carregando NFTs" className={GRID}>
+          {Array.from({ length: PAGE_SIZE }, (_, i) => (
+            <li key={i}>
+              <NftCardSkeleton />
             </li>
           ))}
         </ul>
-      )}
-    </section>
-  )
-}
-
-function NftCard({ nft }: { nft: Nft }) {
-  // Preço anterior da edição que define o "a partir de" (riscado no layout).
-  const compareAt = nft.editions.find((e) => eth.eq(e.price, nft.minPrice) && e.compareAtPrice)?.compareAtPrice
-  return (
-    <article className="grid gap-2 rounded-lg border p-3">
-      <img src={nft.images[0]!.thumbnailUrl} alt={nft.images[0]!.alt} width={480} height={480} loading="lazy" decoding="async" className="aspect-square w-full rounded-md object-cover" />
-      <h3 className="font-medium">
-        <Link to="/nfts/$nftId" params={{ nftId: nft.id }} className="hover:underline">
-          {nft.name}
-        </Link>
-      </h3>
-      <p className="text-sm text-muted-foreground">{nft.collection.name}</p>
-      <p className="tabular-nums" data-testid="nft-price">
-        A partir de {formatEth(nft.minPrice)}
-        {compareAt && <s className="ml-2 text-sm text-muted-foreground">{formatEth(compareAt)}</s>}
-      </p>
-      <p className="text-sm">{nft.available > 0 ? `${nft.available} disponíveis` : 'Esgotado'}</p>
-    </article>
-  )
-}
-
-function GridSkeleton({ count = 8 }: { count?: number }) {
-  return (
-    <div role="status" aria-label="Carregando NFTs" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="grid gap-2 rounded-lg border p-3">
-          <Skeleton className="aspect-square w-full" />
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-5 w-2/3" />
+      ) : list.isError ? (
+        <QueryError error={list.error} onRetry={() => void list.refetch()} title="Não foi possível carregar o catálogo" />
+      ) : list.data.total === 0 ? (
+        <div className="grid justify-items-start gap-4 bg-card p-5">
+          <p className="text-lg leading-6 font-bold">Nenhum NFT encontrado</p>
+          <p className="text-sm leading-6 text-muted-foreground">Ajuste a busca ou os filtros para ver outras obras.</p>
+          <Button className="h-9 px-3 text-base leading-5 font-bold" onClick={() => void navigate({ search: NFT_SEARCH_DEFAULTS, hash: 'mercado' })}>
+            Limpar filtros
+          </Button>
         </div>
-      ))}
+      ) : (
+        <>
+          <ul className={`stagger ${GRID}`}>
+            {list.data.items.map((nft, i) => (
+              <li key={nft.id}>
+                <NftCard nft={nft} index={i} priority={i < 3} favorite={!desktop} />
+              </li>
+            ))}
+          </ul>
+          <Pagination page={list.data.page} totalPages={list.data.totalPages} onPage={(page) => update({ page })} />
+        </>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="page grid gap-24 max-md:gap-12 max-md:px-6 max-md:pt-10 md:pt-8">
+      {desktop ? (
+        <>
+          <HeroDesktop />
+          <section id="mercado" aria-labelledby="mercado-title" className="grid scroll-mt-6 grid-cols-[310px_minmax(0,1fr)] items-start gap-12">
+            <h2 id="mercado-title" className="sr-only">
+              Mercado
+            </h2>
+            <aside aria-label="Filtros" className="grid gap-6">
+              <CatalogFilters search={search} facets={list.data?.facets} onChange={update} />
+              <FeaturedOffer />
+            </aside>
+            <div className="grid gap-8">
+              <div data-testid="catalog-toolbar" className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4 xl:h-[18px]">
+                <CatalogTabs value={search.tab} onChange={(tab) => update({ tab })} />
+                <SortSelect value={search.sort} onChange={(sort) => update({ sort })} />
+              </div>
+              {results}
+            </div>
+          </section>
+        </>
+      ) : (
+        <div className="grid gap-4">
+          <MobileSearch q={search.q} onChange={update} filters={<CatalogFilters search={search} facets={list.data?.facets} onChange={update} />} sort={<SortSelect value={search.sort} onChange={(sort) => update({ sort })} />} />
+          <HeroMobile />
+          <section id="mercado" aria-labelledby="mercado-title" className="grid scroll-mt-6 gap-4">
+            <h2 id="mercado-title" className="sr-only">
+              Mercado
+            </h2>
+            <CatalogTabs value={search.tab} onChange={(tab) => update({ tab })} className="pb-px" />
+            {results}
+          </section>
+          <div className="mx-auto mt-8 w-full max-w-[400px]">
+            <FeaturedOffer />
+          </div>
+        </div>
+      )}
+      <PromoBanners />
+      <Journal />
     </div>
   )
 }
 
-function Filters({ search, facets, onChange }: { search: NftSearch; facets: NftFacets | undefined; onChange: (patch: Partial<NftSearch>) => void }) {
-  const [term, setTerm] = useState(search.q)
-  const [syncedQ, setSyncedQ] = useState(search.q)
-  const [priceError, setPriceError] = useState<string | null>(null)
+/** Desktop 3 × 258 (gap 32 / 72); mobile 2 × 175 (gap 16 / 24) com a coluna direita 32 px abaixo. */
+const GRID = 'grid grid-cols-2 gap-x-4 gap-y-6 max-md:pb-8 max-md:[&>li:nth-child(even)]:translate-y-8 md:grid-cols-3 md:gap-x-8 md:gap-y-[72px]'
 
+/** Barra "Explorar coleções" + botão de filtros do frame mobile (313×45 r10 e 45×45 r14). */
+function MobileSearch({
+  q,
+  onChange,
+  filters,
+  sort,
+}: {
+  q: string
+  onChange: (patch: Partial<NftSearch>) => void
+  filters: ReactNode
+  sort: ReactNode
+}) {
+  const [term, setTerm] = useState(q)
+  const [synced, setSynced] = useState(q)
   // URL → campo: voltar/avançar no histórico atualiza o texto (ajuste durante o render, sem efeito).
-  if (search.q !== syncedQ) {
-    setSyncedQ(search.q)
-    setTerm(search.q)
+  if (q !== synced) {
+    setSynced(q)
+    setTerm(q)
   }
   // Campo → URL com debounce.
   useEffect(() => {
-    if (term.trim() === search.q) return
+    if (term.trim() === q) return
     const id = setTimeout(() => {
       onChange({ q: term.trim() })
     }, 300)
     return () => {
       clearTimeout(id)
     }
-  }, [term, search.q, onChange])
-
-  const applyPrice = (form: HTMLFormElement) => {
-    const data = formValues(form)
-    const read = (name: string) => {
-      const value = (data[name] ?? '').trim().replace(',', '.')
-      return value === '' ? undefined : value
-    }
-    const minPrice = read('minPrice')
-    const maxPrice = read('maxPrice')
-    if ((minPrice && !Eth.safeParse(minPrice).success) || (maxPrice && !Eth.safeParse(maxPrice).success)) {
-      setPriceError('Use valores em ETH, ex.: 0.5')
-      return
-    }
-    setPriceError(null)
-    onChange({ minPrice, maxPrice })
-  }
+  }, [term, q, onChange])
 
   return (
-    <div className="grid gap-4 rounded-lg border p-4" role="search">
-      <label className="grid gap-1.5">
-        <span className="text-sm font-medium">Buscar</span>
+    <div className="flex gap-2" role="search">
+      <label className="flex h-[45px] min-w-0 flex-1 items-center gap-2 rounded-[10px] bg-card px-3 has-focus-visible:outline-2 has-focus-visible:outline-ring">
+        <SearchFieldIcon className="size-[22px] shrink-0 text-subtle" />
+        <span className="sr-only">Buscar NFTs</span>
         <input
           type="search"
-          name="q"
           value={term}
-          onChange={(e) => {
-            setTerm(e.target.value)
-          }}
-          placeholder="Nome, coleção ou criador"
-          className="h-9 rounded-md border px-3"
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Explorar coleções"
+          className="min-w-0 flex-1 bg-transparent text-sm leading-4 font-bold text-foreground outline-none placeholder:text-subtle"
         />
       </label>
-
-      <div role="group" aria-label="Lista" className="flex flex-wrap gap-2">
-        {NftTab.options.map((tab) => (
-          <Button
-            key={tab}
-            variant={search.tab === tab ? 'default' : 'outline'}
-            aria-pressed={search.tab === tab}
-            onClick={() => {
-              onChange({ tab })
-            }}
+      <Sheet>
+        <SheetTrigger asChild>
+          <button
+            type="button"
+            aria-label="Filtros e ordenação"
+            className="grid size-[45px] shrink-0 cursor-pointer place-items-center rounded-[14px] bg-linear-to-b from-primary/45 to-primary text-primary-foreground transition-transform active:scale-95"
           >
-            {TAB_LABEL[tab]}
-          </Button>
-        ))}
-      </div>
-
-      <CheckboxGroup
-        legend="Coleções"
-        options={Category.options}
-        selected={search.categories}
-        label={(c) => CATEGORY_LABEL[c]}
-        count={(c) => facets?.categories[c]}
-        onChange={(categories) => {
-          onChange({ categories })
-        }}
-      />
-      <CheckboxGroup
-        legend="Rede"
-        options={Network.options}
-        selected={search.networks}
-        label={(n) => NETWORK_LABEL[n]}
-        count={(n) => facets?.networks[n]}
-        onChange={(networks) => {
-          onChange({ networks })
-        }}
-      />
-
-      <label className="grid max-w-xs gap-1.5 text-sm">
-        <span className="font-medium">Ordenar por</span>
-        <select
-          value={search.sort}
-          onChange={(e) => {
-            onChange({ sort: e.target.value as NftSort })
-          }}
-          className="h-9 rounded-md border px-2"
-        >
-          {NftSort.options.map((sort) => (
-            <option key={sort} value={sort}>
-              {SORT_LABEL[sort]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <form
-        className="flex flex-wrap items-end gap-3"
-        aria-describedby={priceError ? 'price-error' : undefined}
-        onSubmit={(e) => {
-          e.preventDefault()
-          applyPrice(e.currentTarget)
-        }}
-        key={`${search.minPrice ?? ''}-${search.maxPrice ?? ''}`}
-      >
-        <p className="w-full text-sm font-medium">
-          Faixa de preço{facets?.price && <span className="font-normal"> · {formatEth(facets.price.min)} a {formatEth(facets.price.max)}</span>}
-        </p>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Preço mínimo (ETH)</span>
-          <input name="minPrice" inputMode="decimal" defaultValue={search.minPrice ?? ''} aria-invalid={priceError ? true : undefined} className="h-9 w-32 rounded-md border px-2" />
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Preço máximo (ETH)</span>
-          <input name="maxPrice" inputMode="decimal" defaultValue={search.maxPrice ?? ''} aria-invalid={priceError ? true : undefined} className="h-9 w-32 rounded-md border px-2" />
-        </label>
-        <Button type="submit" variant="outline">
-          Aplicar
-        </Button>
-        {priceError && (
-          <p id="price-error" className="w-full text-sm text-destructive">
-            {priceError}
-          </p>
-        )}
-      </form>
+            <FilterIcon className="size-[22px]" />
+          </button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="max-h-[85dvh] gap-5 overflow-y-auto rounded-t-[20px] border-border bg-background p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <SheetTitle className="text-lg leading-4 font-bold">Filtros</SheetTitle>
+          <SheetDescription className="sr-only">Coleções, faixa de preço, rede e ordenação do catálogo.</SheetDescription>
+          {sort}
+          {filters}
+        </SheetContent>
+      </Sheet>
     </div>
-  )
-}
-
-/** Grupo de filtros multisseleção; a contagem vem da API (facets), já considerando os outros filtros. */
-function CheckboxGroup<T extends string>({
-  legend,
-  options,
-  selected,
-  label,
-  count,
-  onChange,
-}: {
-  legend: string
-  options: readonly T[]
-  selected: T[]
-  label: (option: T) => string
-  count: (option: T) => number | undefined
-  onChange: (selected: T[]) => void
-}) {
-  return (
-    <fieldset className="grid gap-2">
-      <legend className="text-sm font-medium">{legend}</legend>
-      <div className="flex flex-wrap gap-3">
-        {options.map((option) => (
-          <label key={option} className="flex items-center gap-1.5 text-sm">
-            <input
-              type="checkbox"
-              checked={selected.includes(option)}
-              onChange={(e) => {
-                onChange(e.target.checked ? [...selected, option] : selected.filter((o) => o !== option))
-              }}
-            />
-            {label(option)}
-            {count(option) !== undefined && <span className="text-muted-foreground tabular-nums">({count(option)})</span>}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
-function Pagination({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
-  if (totalPages <= 1) return null
-  return (
-    <nav aria-label="Paginação" className="flex items-center gap-3">
-      <Button variant="outline" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Anterior
-      </Button>
-      <span aria-current="page" className="text-sm tabular-nums">
-        Página {page} de {totalPages}
-      </span>
-      <Button variant="outline" disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
-        Próxima
-      </Button>
-    </nav>
   )
 }

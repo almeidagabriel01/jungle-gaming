@@ -6,6 +6,7 @@ import { accountHandlers } from './handlers/account'
 import { authHandlers } from './handlers/auth'
 import { cartHandlers } from './handlers/cart'
 import { catalogHandlers } from './handlers/catalog'
+import { contentHandlers } from './handlers/content'
 import { API, apiError } from './handlers/http'
 import { orderHandlers } from './handlers/orders'
 import { activeScenarios, initScenarioFromUrl, setScenario } from './scenarios'
@@ -17,6 +18,7 @@ const handlers: (RequestHandler | WebSocketHandler)[] = [
   ...cartHandlers,
   ...orderHandlers,
   ...accountHandlers,
+  ...contentHandlers,
   socketHandler,
   // Qualquer rota da API não prevista responde 404 do contrato, nunca o index.html da SPA.
   http.all(`${API}/*`, () => apiError(404, 'NOT_FOUND', 'Rota inexistente')),

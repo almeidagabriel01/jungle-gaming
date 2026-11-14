@@ -10,6 +10,7 @@ export const keys = {
   nftList: (search: NftSearch) => ['nfts', 'list', search] as const,
   nftFeatured: ['nfts', 'featured'] as const,
   nft: (nftId: string) => ['nfts', 'detail', nftId] as const,
+  journal: ['journal'] as const,
   cart: (owner: string) => ['cart', owner] as const,
   quoteAll: ['quote'] as const,
   quote: (owner: string, couponCode: string | undefined, network: Network) => ['quote', owner, couponCode ?? '', network] as const,

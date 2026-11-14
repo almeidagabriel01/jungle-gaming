@@ -12,6 +12,7 @@ import {
   type WalletBody,
 } from '@/contracts/account'
 import { Cart, Quote, type AddCartItemBody, type QuoteRequest } from '@/contracts/cart'
+import { ArticleList } from '@/contracts/content'
 import type { Network } from '@/contracts/common'
 import { Favorites, Nft, NftList, type NftSearch } from '@/contracts/nft'
 import { Order, OrderList, type CreateOrderBody } from '@/contracts/order'
@@ -40,6 +41,7 @@ export const api = {
     session: (signal?: AbortSignal) => request(SessionResponse, { url: '/session', signal }),
     logout: (refreshToken: string) => send({ method: 'POST', url: '/auth/logout', data: { refreshToken } }),
   },
+  journal: (signal?: AbortSignal) => request(ArticleList, { url: '/journal', signal }),
   nfts: {
     list: (search: NftSearch, signal?: AbortSignal) => request(NftList, { url: '/nfts', params: toCatalogParams(search), signal }),
     featured: (signal?: AbortSignal) => request(NftItems, { url: '/nfts/featured', signal }),
@@ -69,7 +71,7 @@ export const api = {
   profile: {
     get: (signal?: AbortSignal) => request(User, { url: '/me/profile', signal }),
     update: (body: UpdateProfileBody) => request(User, { method: 'PATCH', url: '/me/profile', data: body }),
-    avatar: (dataUrl: string) => request(User, { method: 'PUT', url: '/me/avatar', data: { dataUrl } }),
+    avatar: (dataUrl: string | null) => request(User, { method: 'PUT', url: '/me/avatar', data: { dataUrl } }),
     changePassword: (body: ChangePasswordBody) => send({ method: 'POST', url: '/me/password', data: body }),
   },
   wallets: {
