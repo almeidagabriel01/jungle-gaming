@@ -170,7 +170,7 @@ e de última unidade, 2 usuários, favoritos, o carrinho do frame Carrinho (subt
 pedidos. As imagens são as 4 artes do arquivo (exportadas pela API do Figma, em WebP 480/960 px), cada uma
 com as quatro vistas da galeria do detalhe (inteira, busto, meio e close). Resumo, descrição em dois parágrafos
 e as linhas de Rede/Contrato/Direitos seguem os textos do layout, montados com os dados de cada NFT
-(rede, padrão do contrato, armazenamento dos metadados, criador e royalty). Toda mutação é síncrona dentro de `withDb` (sem atualização perdida) e os eventos são
+(rede, padrão do contrato, armazenamento dos metadados e royalty). Toda mutação é síncrona dentro de `withDb` (sem atualização perdida) e os eventos são
 publicados após persistir.
 
 ## Decisões e desvios
@@ -246,8 +246,8 @@ Lighthouse no mobile (4G lento + CPU 4x simulados), mediana de 3: início 0,88 �
 0,92 → 0,96, LCP ~3,2 s → ~2,6 s. A imagem LCP (arte do destaque) depende dos dados da API simulada,
 então o caminho crítico é o chunk dos mocks, que caiu de 170 para 59 kB gzip:
 - **`tldts` fora do bundle:** a lista de sufixos públicos (~100 kB gzip) só serve ao `tough-cookie`, que
-  o MSW usa para cookies; a API simulada autentica por Bearer e não usa cookies. Um alias troca o pacote
-  por `src/mocks/public-suffix.ts` (dois últimos rótulos do host).
+  o MSW usa para cookies; a API simulada autentica por Bearer e não usa cookies. Um plugin do Vite troca o
+  pacote por `src/mocks/public-suffix.ts` (dois últimos rótulos do host) só quando quem importa é o `tough-cookie`.
 - **Socket.IO sob demanda:** o cliente é importado depois do primeiro render (o app já monta com o
   worker ativo, então o WebSocket interceptado continua valendo).
 - **Boot em série mantido:** renderizar o app em paralelo com o worker e segurar só as requisições foi
