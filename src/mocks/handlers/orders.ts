@@ -82,6 +82,14 @@ export const orderHandlers = [
         }
         const wallet = tx.db.wallets.find((w) => w.id === body.value.walletId && w.userId === userId)
         if (!wallet) return { response: apiError(422, 'VALIDATION', 'Carteira inválida', { fields: { walletId: 'Selecione uma carteira cadastrada' } }), delayResponse: false }
+        if (wallet.address.toLowerCase() !== body.value.buyer.address.toLowerCase()) {
+          return {
+            response: apiError(422, 'VALIDATION', 'Endereço diferente da carteira escolhida', {
+              fields: { 'buyer.address': 'Use o endereço da carteira selecionada' },
+            }),
+            delayResponse: false,
+          }
+        }
         const connection = tx.db.walletConnections[userId]
         if (connection?.walletId !== wallet.id || connection.network !== body.value.network) {
           return { response: apiError(409, 'WALLET_NOT_CONNECTED', 'Conecte a carteira na rede escolhida antes de confirmar'), delayResponse: false }

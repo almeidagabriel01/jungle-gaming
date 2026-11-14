@@ -14,6 +14,10 @@ export const User = z.object({
   email: z.email(),
   username: z.string(),
   bio: z.string(),
+  /** Nome ENS do perfil (ex.: ana.kurio.eth); vazio até o colecionador preencher. */
+  ensName: z.string(),
+  /** Apelido público da carteira no perfil. */
+  walletLabel: z.string(),
   avatarUrl: z.string().nullable(),
 })
 export type User = z.infer<typeof User>
@@ -36,7 +40,11 @@ export const LoginBody = z.object({
 export type LoginBody = z.infer<typeof LoginBody>
 
 export const RegisterBody = z.object({
-  name: z.string().trim().min(2, 'Informe seu nome').max(60),
+  // Mesma regra do nome de usuário editável no perfil.
+  username: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9_]{3,20}$/, 'Use de 3 a 20 letras minúsculas, números ou _'),
   email: z.email('E-mail inválido'),
   password: Password,
 })
@@ -44,22 +52,39 @@ export type RegisterBody = z.infer<typeof RegisterBody>
 
 export const RefreshBody = z.object({ refreshToken: z.string() })
 
+export const Username = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9_]{3,20}$/, 'Use de 3 a 20 letras minúsculas, números ou _')
+
+/** Nome ENS completo; o formulário compõe nome + sufixo ".eth". */
+export const EnsName = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9-]{3,}(\.[a-z0-9-]+)*\.eth$/, 'Informe o nome ENS (mínimo de 3 caracteres, ex.: colecionador)')
+
+const DisplayName = z.string().trim().min(2, 'Informe o nome de exibição').max(60, 'Máximo de 60 caracteres')
+const Email = z.email('E-mail inválido').trim().toLowerCase()
+const WalletLabel = z.string().trim().min(2, 'Informe o apelido da carteira').max(30, 'Máximo de 30 caracteres')
+
+/** Campos do layout Perfil do colecionador (a bio não está no layout e não é editada aqui). */
 export const UpdateProfileBody = z.object({
-  name: z.string().trim().min(2, 'Informe seu nome').max(60),
-  username: z
-    .string()
-    .trim()
-    .regex(/^[a-z0-9_]{3,20}$/, 'Use de 3 a 20 letras minúsculas, números ou _'),
-  bio: z.string().trim().max(160, 'Máximo de 160 caracteres'),
+  name: DisplayName,
+  username: Username,
+  email: Email,
+  ensName: EnsName,
+  walletLabel: WalletLabel,
 })
 export type UpdateProfileBody = z.infer<typeof UpdateProfileBody>
 
-/** Avatar enviado como data URL (PNG/JPEG/WebP) de até ~1 MB. */
+/** Avatar enviado como data URL (PNG/JPEG/WebP) de até ~1 MB; `null` remove. */
 export const AvatarBody = z.object({
   dataUrl: z
     .string()
     .regex(/^data:image\/(png|jpeg|webp);base64,/, 'Use PNG, JPEG ou WebP')
-    .max(1_400_000, 'Imagem acima de 1 MB'),
+    .max(1_400_000, 'Imagem acima de 1 MB')
+    .nullable(),
 })
 
 export const ChangePasswordBody = z
@@ -74,22 +99,45 @@ export const WalletRole = z.enum(['primary', 'secondary'])
 
 export const WalletAddress = z.string().trim().regex(/^0x[a-fA-F0-9]{40}$/, 'Endereço deve ter 0x + 40 caracteres hexadecimais')
 
-export const Wallet = z.object({
-  id: Id,
-  label: z.string(),
+/** "Tipo de carteira" do layout (provedor usado para conectar). */
+export const WalletProvider = z.enum(['metamask', 'coinbase', 'walletconnect'], 'Selecione uma carteira')
+export type WalletProvider = z.infer<typeof WalletProvider>
+
+/**
+ * Campos do formulário de carteira do layout (Carteiras e Pagamento): uma definição só,
+ * usada pela API de carteiras e pelo comprador do pedido.
+ */
+export const WalletDetails = z.object({
+  displayName: DisplayName,
+  label: WalletLabel,
+  network: z.enum(Network.options, 'Selecione uma rede'),
+  profileName: z.string().trim().min(2, 'Informe o nome do perfil').max(40, 'Máximo de 40 caracteres'),
   address: WalletAddress,
+  /** "ENS ou carteira secundária (opcional)": vazio, nome .eth ou endereço 0x. */
+  secondaryAddress: z
+    .string()
+    .trim()
+    .regex(/^$|^0x[a-fA-F0-9]{40}$|^[a-z0-9-]+(\.[a-z0-9-]+)*\.eth$/i, 'Use um nome ENS (ex.: nome.eth) ou um endereço 0x'),
+  provider: WalletProvider,
+  referralCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9-]{4,16}$/, 'Use de 4 a 16 letras, números ou hífen'),
+  email: Email,
+  ensName: EnsName,
+})
+export type WalletDetails = z.infer<typeof WalletDetails>
+
+export const Wallet = WalletDetails.extend({
+  id: Id,
   network: Network,
   role: WalletRole,
   createdAt: IsoDate,
 })
 export type Wallet = z.infer<typeof Wallet>
 
-export const WalletBody = z.object({
-  label: z.string().trim().min(2, 'Informe um nome').max(30),
-  address: WalletAddress,
-  network: Network,
-  role: WalletRole,
-})
+export const WalletBody = WalletDetails.extend({ role: WalletRole })
 export type WalletBody = z.infer<typeof WalletBody>
 
 export const WalletConnectBody = z.object({ network: Network })

@@ -1,4 +1,5 @@
 import type { Network } from '@/contracts/common'
+import type { Article } from '@/contracts/content'
 import type { Category } from '@/contracts/nft'
 import { eth } from '@/lib/money'
 import type { Db, DbNft, DbOrder } from './db'
@@ -7,7 +8,7 @@ import type { Db, DbNft, DbOrder } from './db'
  * Seed determinístico: sem Math.random nem Date.now. Mudou o seed → suba SEED_VERSION,
  * o que descarta o estado salvo no navegador (evita estado velho após redeploy).
  */
-export const SEED_VERSION = 2
+export const SEED_VERSION = 3
 
 /** Credenciais fictícias (documentadas no README). Senhas guardadas só como SHA-256 com salt. */
 export const SEED_USERS = {
@@ -194,21 +195,122 @@ function createNfts(): DbNft[] {
   })
 }
 
+/** "Diário da Cunhagem" do layout: conteúdo editorial estático da API simulada. */
+export const ARTICLES: Article[] = [
+  {
+    id: 'art_001',
+    title: 'Como funciona a propriedade de NFTs',
+    excerpt: 'Aprenda a colecionar, negociar e verificar ativos digitais.',
+    publishedAt: '2026-09-12T12:00:00.000Z',
+    readingMinutes: 6,
+    image: { url: '/nfts/ivory-960.webp', thumbnailUrl: '/nfts/ivory-480.webp', alt: 'Retrato de Ivory Baron, primata de terno claro' },
+  },
+  {
+    id: 'art_002',
+    title: '10 artistas digitais para acompanhar',
+    excerpt: 'Conheça criadores que moldam a cultura digital.',
+    publishedAt: '2026-09-13T12:00:00.000Z',
+    readingMinutes: 2,
+    image: { url: '/nfts/emerald-960.webp', thumbnailUrl: '/nfts/emerald-480.webp', alt: 'Retrato de Emerald Ape, primata de óculos redondos' },
+  },
+  {
+    id: 'art_003',
+    title: 'Raridade, atributos e procedência',
+    excerpt: 'Entenda raridade, procedência, direitos autorais e utilidade.',
+    publishedAt: '2026-09-15T12:00:00.000Z',
+    readingMinutes: 3,
+    image: { url: '/nfts/sage-960.webp', thumbnailUrl: '/nfts/sage-480.webp', alt: 'Retrato de Sage Nomad, primata de chapéu e moletom' },
+  },
+  {
+    id: 'art_004',
+    title: 'Como proteger sua carteira',
+    excerpt: 'Proteja sua carteira, seus ativos e sua identidade.',
+    publishedAt: '2026-09-15T15:00:00.000Z',
+    readingMinutes: 2,
+    image: { url: '/nfts/golden-960.webp', thumbnailUrl: '/nfts/golden-480.webp', alt: 'Retrato de Golden Beat, primata de fones de ouvido' },
+  },
+]
+
 export function createSeed(): Db {
   const nfts = createNfts()
   const ana = SEED_USERS.ana
   const bruno = SEED_USERS.bruno
 
+  const createdAt = new Date(BASE_TIME).toISOString()
+  /** Carteiras do frame mobile Pagamento: "Reserva" (nova.kurio.eth, Polygon) e "Principal" (0xA91F…E82C, Ethereum). */
+  const wallets: Db['wallets'] = [
+    {
+      id: 'wal_ana_1',
+      userId: ana.id,
+      role: 'primary',
+      createdAt,
+      displayName: 'Ana Souza',
+      label: 'Principal',
+      network: 'ethereum',
+      profileName: 'Ana Colecionadora',
+      address: '0xA91F3c5d7e9b1a2c4d6e8f0a1b3c5d7e9f0bE82C',
+      secondaryAddress: '',
+      provider: 'metamask',
+      referralCode: 'KURIO-ANA',
+      email: ana.email,
+      ensName: 'ana.kurio.eth',
+    },
+    {
+      id: 'wal_ana_2',
+      userId: ana.id,
+      role: 'secondary',
+      createdAt,
+      displayName: 'Ana Souza',
+      label: 'Reserva',
+      network: 'polygon',
+      profileName: 'Ana Colecionadora',
+      address: '0x' + 'c3'.repeat(20),
+      secondaryAddress: 'nova.kurio.eth',
+      provider: 'coinbase',
+      referralCode: 'KURIO-ANA',
+      email: ana.email,
+      ensName: 'nova.kurio.eth',
+    },
+    {
+      id: 'wal_bruno_1',
+      userId: bruno.id,
+      role: 'primary',
+      createdAt,
+      displayName: 'Bruno Lima',
+      label: 'Principal',
+      network: 'polygon',
+      profileName: 'Bruno Lima',
+      address: '0x' + 'd4'.repeat(20),
+      secondaryAddress: '',
+      provider: 'walletconnect',
+      referralCode: 'KURIO-BRUNO',
+      email: bruno.email,
+      ensName: 'bruno.kurio.eth',
+    },
+  ]
+
   const pastOrder = (id: string, userId: string, nft: DbNft): DbOrder => {
     const ed = nft.editions[0]!
+    const w = wallets.find((x) => x.userId === userId && x.role === 'primary')!
     return {
       id,
       userId,
       status: 'confirmed',
       version: 2,
       network: 'ethereum',
-      wallet: { id: userId === ana.id ? 'wal_ana_1' : 'wal_bruno_1', label: 'Principal', address: '0x' + 'a1'.repeat(20) },
-      buyer: { fullName: userId === ana.id ? 'Ana Souza' : 'Bruno Lima', email: userId === ana.id ? ana.email : bruno.email, country: 'Brasil' },
+      wallet: { id: w.id, label: w.label, address: w.address },
+      buyer: {
+        displayName: w.displayName,
+        username: userId === ana.id ? 'ana_souza' : 'bruno_lima',
+        profileName: w.profileName,
+        email: w.email,
+        ensName: w.ensName,
+        referralCode: w.referralCode,
+        address: w.address,
+        secondaryAddress: w.secondaryAddress,
+        provider: w.provider,
+        note: '',
+      },
       lines: [
         {
           itemId: 'itm_seed',
@@ -252,6 +354,8 @@ export function createSeed(): Db {
         email: ana.email,
         username: 'ana_souza',
         bio: 'Coleciono arte generativa desde 2021.',
+        ensName: 'ana.kurio.eth',
+        walletLabel: 'Principal',
         avatarUrl: null,
         salt: 'salt-ana-7f3a',
         passwordHash: 'c31289cafe495a107b32c78c05dc193bae28a9408891ac575827912121c54e11',
@@ -262,6 +366,8 @@ export function createSeed(): Db {
         email: bruno.email,
         username: 'bruno_lima',
         bio: '',
+        ensName: 'bruno.kurio.eth',
+        walletLabel: 'Principal',
         avatarUrl: null,
         salt: 'salt-bruno-91c2',
         passwordHash: '88c93accd1728fa682e867eda004a3a389ed988fcb2540221333df2b297eee7b',
@@ -284,11 +390,7 @@ export function createSeed(): Db {
     ],
     quotes: [],
     orders: [pastOrder('ord_seed_ana', ana.id, nfts[1]!), pastOrder('ord_seed_bruno', bruno.id, nfts[5]!)],
-    wallets: [
-      { id: 'wal_ana_1', userId: ana.id, label: 'Principal', address: '0x' + 'a1'.repeat(20), network: 'ethereum', role: 'primary', createdAt: new Date(BASE_TIME).toISOString() },
-      { id: 'wal_ana_2', userId: ana.id, label: 'Reserva', address: '0x' + 'c3'.repeat(20), network: 'polygon', role: 'secondary', createdAt: new Date(BASE_TIME).toISOString() },
-      { id: 'wal_bruno_1', userId: bruno.id, label: 'Principal', address: '0x' + 'd4'.repeat(20), network: 'polygon', role: 'primary', createdAt: new Date(BASE_TIME).toISOString() },
-    ],
+    wallets,
     sessions: [],
     walletConnections: {},
     firedTriggers: [],

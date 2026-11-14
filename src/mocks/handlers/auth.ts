@@ -41,16 +41,20 @@ export const authHandlers = [
       const passwordHash = await hashPassword(salt, body.value.password)
 
       return withDb((tx) => {
-        if (hasScenario('register-conflict') || tx.db.users.some((u) => u.email === email)) {
-          return apiError(409, 'EMAIL_TAKEN', 'E-mail já cadastrado', { fields: { email: 'Este e-mail já está em uso' } })
-        }
-        const base = email.split('@')[0]!.replace(/[^a-z0-9_]/g, '_').slice(0, 14) || 'colecionador'
+        const { username } = body.value
+        const fields: Record<string, string> = {}
+        if (hasScenario('register-conflict') || tx.db.users.some((u) => u.email === email)) fields.email = 'Este e-mail já está em uso'
+        if (tx.db.users.some((u) => u.username === username)) fields.username = 'Este nome de usuário já está em uso'
+        if (fields.email) return apiError(409, 'EMAIL_TAKEN', 'E-mail já cadastrado', { fields })
+        if (fields.username) return apiError(409, 'USERNAME_TAKEN', 'Nome de usuário em uso', { fields })
         const user: DbUser = {
           id: nextId(tx, 'usr'),
-          name: body.value.name,
+          name: username,
           email,
-          username: `${base}_${tx.db.seq}`,
+          username,
           bio: '',
+          ensName: '',
+          walletLabel: '',
           avatarUrl: null,
           salt,
           passwordHash,

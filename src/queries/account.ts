@@ -29,6 +29,7 @@ function useProfileMutation<V>(fn: (vars: V) => Promise<User>, message: string) 
 
 export const useUpdateProfile = () => useProfileMutation((body: UpdateProfileBody) => api.profile.update(body), 'Perfil atualizado.')
 export const useUpdateAvatar = () => useProfileMutation((dataUrl: string) => api.profile.avatar(dataUrl), 'Avatar atualizado.')
+export const useRemoveAvatar = () => useProfileMutation((_: undefined) => api.profile.avatar(null), 'Avatar removido.')
 
 export const useChangePassword = () =>
   useMutation({

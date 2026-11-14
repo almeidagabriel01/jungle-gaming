@@ -55,6 +55,9 @@ export const accountHandlers = [
         if (tx.db.users.some((u) => u.id !== auth.value && u.username === body.value.username)) {
           return apiError(409, 'USERNAME_TAKEN', 'Nome de usuário em uso', { fields: { username: 'Este nome de usuário já está em uso' } })
         }
+        if (tx.db.users.some((u) => u.id !== auth.value && u.email === body.value.email)) {
+          return apiError(409, 'EMAIL_TAKEN', 'E-mail já cadastrado', { fields: { email: 'Este e-mail já está em uso' } })
+        }
         const user = tx.db.users.find((u) => u.id === auth.value)!
         Object.assign(user, body.value)
         return HttpResponse.json(toUser(user))
@@ -148,8 +151,9 @@ export const accountHandlers = [
         if (duplicateAddress(tx.db, userId, body.value.address, wallet.id)) {
           return apiError(422, 'VALIDATION', 'Carteira já cadastrada', { fields: { address: 'Este endereço já está cadastrado' } })
         }
-        Object.assign(wallet, { label: body.value.label, address: body.value.address, network: body.value.network })
-        applyRole(tx.db, userId, wallet.id, body.value.role)
+        const { role, ...details } = body.value
+        Object.assign(wallet, details)
+        applyRole(tx.db, userId, wallet.id, role)
         return HttpResponse.json({ items: walletsOf(tx.db, userId) })
       })
     }),

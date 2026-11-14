@@ -1,3 +1,4 @@
+import type { WalletProvider } from '@/contracts/account'
 import type { Network } from '@/contracts/common'
 import type { Category, NftSort, NftTab, Rarity } from '@/contracts/nft'
 
@@ -26,3 +27,6 @@ export const SORT_LABEL: Record<NftSort, string> = {
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: 'Comum', rare: 'Raro', legendary: 'Lendário' }
+
+/** "Tipo de carteira" (frames Pagamento e Carteiras). */
+export const PROVIDER_LABEL: Record<WalletProvider, string> = { metamask: 'MetaMask', coinbase: 'Coinbase Wallet', walletconnect: 'WalletConnect' }

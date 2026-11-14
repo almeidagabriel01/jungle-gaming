@@ -1,14 +1,27 @@
 import { z } from 'zod'
+import { Username, WalletDetails } from './account'
 import { Coupon, QuoteLine } from './cart'
 import { Eth, Id, IsoDate, Network } from './common'
 
 export const OrderStatus = z.enum(['pending', 'confirmed', 'declined'])
 export type OrderStatus = z.infer<typeof OrderStatus>
 
-export const Buyer = z.object({
-  fullName: z.string().trim().min(3, 'Informe o nome completo').max(80),
-  email: z.email('E-mail inválido'),
-  country: z.string().trim().min(2, 'Informe o país').max(56),
+/**
+ * Comprador = campos do formulário do Pagamento (snapshot no pedido): dados do colecionador,
+ * dados da carteira escolhida (endereço, ENS secundário, tipo) e observação opcional.
+ */
+export const Buyer = WalletDetails.pick({
+  displayName: true,
+  profileName: true,
+  email: true,
+  ensName: true,
+  referralCode: true,
+  address: true,
+  secondaryAddress: true,
+  provider: true,
+}).extend({
+  username: Username,
+  note: z.string().trim().max(280, 'Máximo de 280 caracteres'),
 })
 export type Buyer = z.infer<typeof Buyer>
 
