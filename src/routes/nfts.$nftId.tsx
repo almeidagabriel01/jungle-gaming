@@ -16,13 +16,13 @@ import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { NFT_SEARCH_DEFAULTS, type Nft } from '@/contracts/nft'
+import type { Nft } from '@/contracts/nft'
 import { announce } from '@/lib/announcer'
 import { apiFieldErrors } from '@/lib/forms'
 import { NETWORK_LABEL, RARITY_LABEL } from '@/lib/labels'
 import { eth } from '@/lib/money'
 import { useAddToCart, useCart, useCartCount } from '@/queries/cart'
-import { useNft, useNftList } from '@/queries/catalog'
+import { useNft, useRelatedNfts } from '@/queries/catalog'
 
 export const Route = createFileRoute('/nfts/$nftId')({
   component: NftDetailPage,
@@ -195,7 +195,7 @@ function NftDetail({ nft }: { nft: Nft }) {
             </div>
 
             <h2 className="mt-3 text-[15px] leading-4 font-bold max-md:sr-only">Sobre este NFT:</h2>
-            <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{nft.description}</p>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{nft.summary}</p>
 
             <RadioGroup.Root
               value={edition.id}
@@ -205,7 +205,7 @@ function NftDetail({ nft }: { nft: Nft }) {
               }}
               aria-labelledby="edition-label"
               aria-describedby="quantity-hint"
-              className="mt-3 grid gap-2 md:gap-3"
+              className="mt-3 grid gap-2 md:mt-2 md:gap-3"
             >
               <p id="edition-label" className="text-[15px] leading-4 font-bold">
                 Edição:
@@ -231,7 +231,7 @@ function NftDetail({ nft }: { nft: Nft }) {
               </div>
             </RadioGroup.Root>
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-4 max-md:hidden">
+            <div className="mt-3 flex flex-wrap items-start justify-between gap-4 max-md:hidden">
               {stepper('md')}
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="icon" aria-label={addLabel} title="Adicionar ao carrinho" disabled={soldOut || add.isPending} onClick={() => addToCart()}>
@@ -252,7 +252,7 @@ function NftDetail({ nft }: { nft: Nft }) {
             </p>
             {addError && <p className="mt-1 text-sm text-destructive">{addError}</p>}
 
-            <dl className="mt-3 grid gap-3 text-[15px] leading-5 text-subtle">
+            <dl className="mt-3 grid gap-3 text-[15px] leading-5 text-subtle md:mt-3.5">
               <div>
                 <dt className="inline">ID do token:</dt> <dd className="inline">#{nft.tokenId}</dd>
               </div>
@@ -312,7 +312,7 @@ function Gallery({ nft }: { nft: Nft }) {
   const image = nft.images[index] ?? nft.images[0]!
 
   return (
-    <section aria-label="Galeria" className="md:grid md:max-w-[573px] md:grid-cols-[100px_minmax(0,1fr)] md:items-start md:gap-7">
+    <section aria-label="Galeria" className="md:grid md:max-w-[572px] md:grid-cols-[100px_minmax(0,444px)] md:items-center md:gap-7">
       <ul className="grid gap-4 max-md:hidden">
         {nft.images.map((img, i) => (
           <li key={img.url}>
@@ -387,10 +387,11 @@ function Share({ nft }: { nft: Nft }) {
   const url = `${window.location.origin}/nfts/${nft.id}`
   const text = `${nft.name} na Kurio`
   const enc = encodeURIComponent
-  const link = 'grid size-6 place-items-center text-foreground transition-colors hover:text-accent-text'
+  // Alvo de 24 px (WCAG 2.5.8) numa linha de 18 px como no layout: a sobra transborda sem empurrar a página.
+  const link = '-my-[3px] grid size-6 place-items-center text-foreground transition-colors hover:text-accent-text'
   const external = { target: '_blank', rel: 'noopener noreferrer' } as const
   return (
-    <div className="mt-3 flex flex-wrap items-center max-md:hidden">
+    <div className="mt-3 flex h-[18px] flex-wrap items-center max-md:hidden">
       <p className="mr-[3px] text-[15px] leading-4 font-bold">Compartilhar este NFT:</p>
       <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`} {...external} aria-label="Compartilhar no LinkedIn (abre em nova aba)" className={link}>
         <LinkedinIcon className="size-[15px]" />
@@ -409,7 +410,7 @@ const shortAddress = (address: string) => (address.length > 14 ? `${address.slic
 
 function DetailTabs({ nft }: { nft: Nft }) {
   const trigger =
-    'relative cursor-pointer pb-3 text-[15px] leading-4 whitespace-nowrap text-foreground transition-colors hover:text-accent-text md:text-[17px] data-[state=active]:font-bold data-[state=active]:text-accent-text after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 data-[state=active]:after:scale-x-100'
+    'relative cursor-pointer pb-3 text-[15px] leading-4 md:pb-[11px] whitespace-nowrap text-foreground transition-colors hover:text-accent-text md:text-[17px] data-[state=active]:font-bold data-[state=active]:text-accent-text after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 data-[state=active]:after:scale-x-100'
   const item = (label: string, value: ReactNode) => (
     <div>
       <dt className="text-sm leading-6 font-bold">{label}</dt>
@@ -427,17 +428,17 @@ function DetailTabs({ nft }: { nft: Nft }) {
         </Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="details" className="animate-fade pt-3">
-        <p className="text-sm leading-6 text-muted-foreground">{nft.description}</p>
+        <p className="text-sm leading-6 whitespace-pre-line text-muted-foreground">{nft.description}</p>
         <dl className="mt-3 grid gap-3">
-          {item('Rede:', NETWORK_LABEL[nft.network])}
+          {item('Rede:', `Cunhado na ${NETWORK_LABEL[nft.network]} com procedência imutável e metadados armazenados no IPFS.`)}
           {item(
             'Contrato:',
             <>
               <span aria-hidden="true">{shortAddress(nft.contract.address)}</span>
-              <span className="sr-only">{nft.contract.address}</span> • Padrão {nft.contract.standard}
+              <span className="sr-only">{nft.contract.address}</span> • Contrato inteligente {nft.contract.standard} verificado.
             </>,
           )}
-          {item('Direitos autorais:', `${nft.royaltyPercent}% nas vendas secundárias, para ${nft.creator.name}.`)}
+          {item('Direitos autorais:', `${String(nft.royaltyPercent).replace('.', ',')}% nas vendas secundárias, pagos automaticamente pelos mercados compatíveis.`)}
         </dl>
       </Tabs.Content>
       <Tabs.Content value="reviews" className="animate-fade pt-4">
@@ -455,11 +456,10 @@ function DetailTabs({ nft }: { nft: Nft }) {
 }
 
 function RelatedRail({ nft }: { nft: Nft }) {
-  const related = useNftList({ ...NFT_SEARCH_DEFAULTS, collection: nft.collection.id })
-  const items = related.isError ? [] : related.data?.items.filter((n) => n.id !== nft.id)
+  const related = useRelatedNfts(nft.id)
   return (
     <div className="mt-16 md:mt-24">
-      <NftRail title="Mais desta coleção" items={items} loading={related.isPending} />
+      <NftRail title="Mais desta coleção" items={related.items} loading={related.isPending} />
     </div>
   )
 }

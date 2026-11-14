@@ -8,7 +8,7 @@ import type { Db, DbNft, DbOrder } from './db'
  * Seed determinístico: sem Math.random nem Date.now. Mudou o seed → suba SEED_VERSION,
  * o que descarta o estado salvo no navegador (evita estado velho após redeploy).
  */
-export const SEED_VERSION = 3
+export const SEED_VERSION = 4
 
 /** Credenciais fictícias (documentadas no README). Senhas guardadas só como SHA-256 com salt. */
 export const SEED_USERS = {
@@ -64,15 +64,16 @@ const NFT_COUNT = Object.values(CATEGORY_COUNTS).reduce((a, b) => a + b, 0) // 2
 const NETWORK_COUNTS: Record<Network, number> = { ethereum: 100, polygon: 66, solana: 73 }
 
 /** Os 9 primeiros (ordem "Listados recentemente") são os cards do Figma, com os mesmos preços. */
-const FIGMA_NFTS: { name: string; family: Family; price: string; compareAt?: string; category: Category; network: Network }[] = [
+/** `collection`: índice em COLLECTIONS (padrão Kurio Apes); "Mais desta coleção" do frame não inclui Sage, Neon e Golden Frequency. */
+const FIGMA_NFTS: { name: string; family: Family; price: string; compareAt?: string; category: Category; network: Network; collection?: number }[] = [
   { name: 'Emerald Ape #042', family: 'emerald', price: '1.19', category: 'digital-art', network: 'ethereum' },
-  { name: 'Sage Nomad #009', family: 'sage', price: '1.69', category: 'digital-art', network: 'polygon' },
-  { name: 'Neon Vessel #552', family: 'ivory', price: '1.99', compareAt: '2.29', category: '3d', network: 'solana' },
+  { name: 'Sage Nomad #009', family: 'sage', price: '1.69', category: 'digital-art', network: 'polygon', collection: 2 },
+  { name: 'Neon Vessel #552', family: 'ivory', price: '1.99', compareAt: '2.29', category: '3d', network: 'solana', collection: 1 },
   { name: 'Cosmic Bloom #118', family: 'sage', price: '1.29', category: 'generative', network: 'ethereum' },
   { name: 'Violet Nomad #314', family: 'sage', price: '1.39', category: 'digital-art', network: 'polygon' },
   { name: 'Ivory Baron #088', family: 'ivory', price: '1.79', category: 'collectibles', network: 'ethereum' },
   { name: 'Golden Beat #207', family: 'golden', price: '0.99', category: 'music', network: 'solana' },
-  { name: 'Golden Frequency #071', family: 'golden', price: '0.59', category: 'music', network: 'polygon' },
+  { name: 'Golden Frequency #071', family: 'golden', price: '0.59', category: 'music', network: 'polygon', collection: 3 },
   { name: 'Golden Signal #160', family: 'golden', price: '0.39', category: 'music', network: 'ethereum' },
 ]
 
@@ -139,7 +140,7 @@ function createNfts(): DbNft[] {
       // A edição mais barata (último índice) sempre tem estoque: o preço mínimo fica igual ao base.
       const cheapest = e === set.length - 1 || multiplier === '1'
       const available = figma
-        ? editionName === '1/1' ? (n === 1 ? 0 : 1) : Math.max(10, Math.floor(supply * 0.6))
+        ? editionName === '1/1' ? 1 : Math.max(10, Math.floor(supply * 0.6))
         : cheapest ? Math.max(1, Math.floor(supply * rand())) : roll < 0.2 ? 0 : roll < 0.35 ? 1 : Math.max(1, Math.floor(supply * rand()))
       return {
         id: `${id}_ed${e + 1}`,
@@ -156,7 +157,7 @@ function createNfts(): DbNft[] {
       editions.splice(0, editions.length, { ...editions[0]!, name: '1/1', price: base, supply: 1, available: 1 })
     }
 
-    const collection = figma ? COLLECTIONS[0]! : pick(COLLECTIONS)
+    const collection = figma ? COLLECTIONS[figma.collection ?? 0]! : pick(COLLECTIONS)
     const creator = figma ? CREATORS[0]! : pick(CREATORS)
     const rarityRoll = rand()
     const rarity = n === 1 ? 'rare' : rarityRoll < 0.08 ? 'legendary' : rarityRoll < 0.3 ? 'rare' : 'common'
@@ -166,12 +167,15 @@ function createNfts(): DbNft[] {
       network === 'solana'
         ? { address: base58(rand, 44), standard: 'Metaplex' }
         : { address: n === 1 ? '0x7A42c9d1e5f03b8a6c2d4e7f9a1b3c5d7e8f19E8' : `0x${hex(rand, 40)}`, standard: 'ERC-721' }
-    const firstEdition = editions[editions.length - 1]!.name
+    // Maior tiragem numerada ("obra digital 1/50"); a edição Aberta não tem número.
+    const firstEdition = editions.findLast((e) => e.name !== 'Aberta')!.name
     return {
       id,
       name,
       tokenId,
-      description: `${name} é uma obra digital ${firstEdition} finalizada à mão da coleção ${collection.name}. Cada atributo fica armazenado nos metadados do token e verificado na ${networkName}. A propriedade inclui a arte em alta resolução e um registro permanente de procedência na rede. ${creator} recebe ${String(royaltyPercent).replace('.', ',')}% de direitos autorais nas vendas secundárias.`,
+      // Textos do layout (frame "Detalhes do NFT"), preenchidos com os dados de cada obra.
+      summary: `Um colecionável digital finalizado à mão da coleção ${collection.name}, verificado na ${networkName}, com arte desbloqueável e acesso para colecionadores.`,
+      description: `${name} é uma obra digital ${firstEdition} finalizada à mão da coleção ${collection.name}. Cada atributo fica armazenado nos metadados do token e verificado na ${networkName}. A obra explora identidade, movimento e luz em um mundo digital sem fronteiras.\n\nA propriedade inclui a arte em alta resolução, lançamentos exclusivos para colecionadores e um registro permanente de procedência registrada na rede. ${creator} recebe ${String(royaltyPercent).replace('.', ',')}% de direitos autorais nas vendas secundárias, apoiando novos trabalhos e lançamentos da comunidade.`,
       category,
       collection,
       creator: { name: creator },
@@ -181,8 +185,11 @@ function createNfts(): DbNft[] {
       attributes: n === 1 ? ['Óculos', 'Esmeralda'] : FAMILY[family].traits,
       rarity,
       rating: n === 1 ? { average: 4.8, count: 19 } : { average: Math.round((3.6 + rand() * 1.4) * 10) / 10, count: Math.floor(rand() * 48) },
+      // Quatro vistas da arte, como a galeria do layout: completa, dois enquadramentos e o rosto.
       images: [
         { url: `/nfts/${family}-960.webp`, thumbnailUrl: `/nfts/${family}-480.webp`, alt: `${name}, obra completa` },
+        { url: `/nfts/${family}-bust-960.webp`, thumbnailUrl: `/nfts/${family}-bust-480.webp`, alt: `${name}, busto` },
+        { url: `/nfts/${family}-mid-960.webp`, thumbnailUrl: `/nfts/${family}-mid-480.webp`, alt: `${name}, enquadramento próximo` },
         { url: `/nfts/${family}-close-960.webp`, thumbnailUrl: `/nfts/${family}-close-480.webp`, alt: `${name}, detalhe do rosto` },
       ],
       editions,

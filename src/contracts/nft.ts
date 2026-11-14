@@ -27,6 +27,9 @@ export const Nft = z.object({
   name: z.string(),
   /** Número do token, como exibido: "0042". */
   tokenId: z.string(),
+  /** Resumo de uma frase ("Sobre este NFT"). */
+  summary: z.string(),
+  /** Texto completo da aba "Detalhes do NFT"; parágrafos separados por linha em branco. */
   description: z.string(),
   category: Category,
   /** Coleção do projeto (ex.: "Kurio Apes"); não confundir com `category`. */
