@@ -19,6 +19,8 @@ import { ownerKey, sessionStore } from '@/session/store'
 export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected'
 
 const SEEN_LIMIT = 500
+/** Nova tentativa de carregar o cliente quando o chunk falha (rede caiu), como o reconnect do socket.io. */
+const LOAD_RETRY_MS = 5_000
 const seen = new Set<string>()
 const versions = new Map<string, number>()
 
@@ -173,17 +175,21 @@ export function startRealtime(qc: QueryClient): () => void {
   }
   // Cliente carregado sob demanda, fora do chunk do primeiro render. O app só monta depois do worker
   // do MSW (main.tsx), então o engine.io já captura o WebSocket interceptado ao avaliar o módulo.
-  const open = async (resumed: boolean) => {
-    const current = ++generation
+  const open = async (resumed: boolean, current: number) => {
     setStatus('connecting')
     const { io } = await import('socket.io-client')
     if (stopped || current !== generation) return
     close()
     socket = connect(io, qc, resumed)
   }
+  let retry: ReturnType<typeof setTimeout> | undefined
   const start = (resumed: boolean) => {
-    open(resumed).catch(() => {
-      if (!stopped) setStatus('disconnected')
+    clearTimeout(retry)
+    const current = ++generation
+    open(resumed, current).catch(() => {
+      if (stopped || current !== generation) return
+      setStatus('disconnected')
+      retry = setTimeout(() => start(resumed), LOAD_RETRY_MS)
     })
   }
   start(false)
@@ -195,6 +201,7 @@ export function startRealtime(qc: QueryClient): () => void {
   })
   return () => {
     stopped = true
+    clearTimeout(retry)
     unsubscribe()
     close()
     setStatus('disconnected')
