@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
+import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
 import { useNotices } from '@/lib/announcer'
@@ -29,7 +30,8 @@ function RootLayout() {
         Pular para o conteúdo
       </a>
       <SiteHeader />
-      <main id="conteudo" tabIndex={-1} className={showsMobileNav ? 'pb-24 outline-none md:pb-0' : 'outline-none'}>
+      {/* min-h: o rodapé começa fora da dobra, então o conteúdo que chega da API não o empurra na tela (CLS). */}
+      <main id="conteudo" tabIndex={-1} className={cn('min-h-dvh outline-none', showsMobileNav && 'pb-24 md:pb-0')}>
         <Outlet />
       </main>
       <SiteFooter />

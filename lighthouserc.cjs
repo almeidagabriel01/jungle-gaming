@@ -18,10 +18,13 @@ module.exports = {
     },
     assert: {
       assertions: {
-        'categories:performance': ['warn', { minScore: 0.9, aggregationMethod: 'median-run' }],
-        'categories:accessibility': ['warn', { minScore: 0.95, aggregationMethod: 'median-run' }],
-        'categories:best-practices': ['warn', { minScore: 0.95, aggregationMethod: 'median-run' }],
-        'categories:seo': ['warn', { minScore: 0.9, aggregationMethod: 'median-run' }],
+        // Meta 0.9 nos dois perfis. No mobile (4G lento + CPU 4x simulados) o build de demonstração
+        // carrega a camada de mocks inteira (MSW + seed, ~175 kB gz) antes do app: fica em ~0.76 e é
+        // aviso, não erro. Sem os mocks (API real) esse chunk sai do caminho crítico.
+        'categories:performance': [preset === 'mobile' ? 'warn' : 'error', { minScore: 0.9, aggregationMethod: 'median-run' }],
+        'categories:accessibility': ['error', { minScore: 0.95, aggregationMethod: 'median-run' }],
+        'categories:best-practices': ['error', { minScore: 0.95, aggregationMethod: 'median-run' }],
+        'categories:seo': ['error', { minScore: 0.9, aggregationMethod: 'median-run' }],
       },
     },
     upload: { target: 'filesystem', outputDir: `.lighthouseci/${preset}`, reportFilenamePattern: '%%PATHNAME%%-%%DATETIME%%-report.%%EXTENSION%%' },
