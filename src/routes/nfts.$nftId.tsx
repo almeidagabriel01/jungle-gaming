@@ -439,10 +439,7 @@ function DetailTabs({ nft }: { nft: Nft }) {
               {nft.contract.verified ? ' verificado' : ''}.
             </>,
           )}
-          {item(
-            'Direitos autorais:',
-            `${String(nft.royaltyPercent).replace('.', ',')}% nas vendas secundárias para ${nft.creator.name}, pagos automaticamente pelos mercados compatíveis.`,
-          )}
+          {item('Direitos autorais:', `${String(nft.royaltyPercent).replace('.', ',')}% nas vendas secundárias, pagos automaticamente pelos mercados compatíveis.`)}
         </dl>
       </Tabs.Content>
       <Tabs.Content value="reviews" className="animate-fade pt-4">
