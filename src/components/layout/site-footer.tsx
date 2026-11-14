@@ -23,7 +23,10 @@ const SOCIAL: { label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }[] 
   { label: 'YouTube', Icon: YoutubeIcon },
 ]
 
-const linkClass = 'cursor-pointer text-left text-[15px] transition-colors hover:text-accent-text'
+const linkClass = 'cursor-pointer text-left text-sm leading-[30px] transition-colors hover:text-accent-text'
+const heading = 'text-lg leading-4 font-bold'
+/** Colunas do layout: 211 px a cada 303 px (gap 92) na faixa e nos links. */
+const columns = 'md:grid-cols-2 xl:grid-cols-[211px_211px_211px_minmax(0,1fr)] xl:gap-x-[92px]'
 
 /** Item de rodapé fora do escopo: botão que avisa, nunca um link morto. */
 const Soon = ({ children }: { children: string }) => (
@@ -34,39 +37,40 @@ const Soon = ({ children }: { children: string }) => (
   </li>
 )
 
+/** Rodapé do frame Desktop / Início (1200×610): serviços + newsletter, faixa da marca, links e copyright. */
 export function SiteFooter() {
   return (
-    <footer className="page mt-24 pb-28 md:pb-0">
-      <div className="grid gap-8 rounded-t-md bg-card px-6 py-8 md:grid-cols-2 md:px-12 xl:grid-cols-[repeat(3,1fr)_1.25fr] xl:gap-0">
+    <footer className="page mt-24 pb-28 md:pb-6">
+      <div className="grid gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-7 xl:pb-4">
         {FEATURES.map((f) => (
-          <section key={f.mark} className="grid content-start gap-3 xl:border-r xl:border-primary xl:px-[18px] xl:first:pl-0">
-            <span aria-hidden="true" className="grid size-[74px] place-items-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+          <section key={f.mark} className="grid content-start gap-3 xl:w-[265px] xl:shrink-0 xl:border-r xl:border-primary xl:px-4">
+            <span aria-hidden="true" className="grid size-[74px] place-items-center rounded-full bg-primary text-2xl leading-8 font-bold text-primary-foreground">
               {f.mark}
             </span>
-            <h2 className="text-[17px] font-bold">{f.title}</h2>
-            <p className="max-w-[240px] text-[15px] leading-[22px] text-muted-foreground">{f.text}</p>
+            <h2 className="text-[17px] leading-4 font-bold">{f.title}</h2>
+            <p className="max-w-[204px] text-sm leading-[22px] text-muted-foreground">{f.text}</p>
           </section>
         ))}
         <Newsletter />
       </div>
 
-      <div className="grid gap-3 bg-band px-6 py-6 text-[15px] md:grid-cols-4 md:items-center md:px-8">
-        <p className="text-base font-bold tracking-[0.1em]">KURIO</p>
-        <p className="max-w-[260px]">Feito para colecionadores, criadores e cultura</p>
-        <a href="mailto:contato@email.com" className="hover:text-accent-text">
+      <div className={`grid gap-3 bg-band p-8 text-sm leading-[22px] xl:h-[88px] xl:items-center xl:py-0 ${columns}`}>
+        <p className="text-sm leading-[18px] font-bold tracking-[1.4px]">KURIO</p>
+        <p className="whitespace-pre-line xl:whitespace-pre">{'Feito para colecionadores,\ncriadores e cultura'}</p>
+        <a href="mailto:contato@email.com" className="justify-self-start hover:text-accent-text">
           contato@email.com
         </a>
-        <a href="tel:+551140028922" className="hover:text-accent-text">
+        <a href="tel:+551140028922" className="justify-self-start hover:text-accent-text">
           +55 11 4002 8922
         </a>
       </div>
 
-      <div className="grid grid-cols-2 gap-8 bg-card px-6 py-8 md:grid-cols-4 md:px-8">
-        <nav aria-labelledby="footer-profile">
-          <h2 id="footer-profile" className="mb-3 text-xl font-bold">
+      <div className={`grid grid-cols-2 gap-8 bg-card p-8 ${columns}`}>
+        <nav aria-labelledby="footer-profile" className="grid content-start gap-2">
+          <h2 id="footer-profile" className={heading}>
             Meu perfil
           </h2>
-          <ul className="grid gap-2">
+          <ul>
             <li>
               <Link to="/profile" className={linkClass}>
                 Meu perfil
@@ -82,11 +86,11 @@ export function SiteFooter() {
             </li>
           </ul>
         </nav>
-        <nav aria-labelledby="footer-help">
-          <h2 id="footer-help" className="mb-3 text-xl font-bold">
+        <nav aria-labelledby="footer-help" className="grid content-start gap-2">
+          <h2 id="footer-help" className={heading}>
             Central de ajuda
           </h2>
-          <ul className="grid gap-2">
+          <ul>
             <Soon>Central de ajuda</Soon>
             <Soon>Como comprar NFTs</Soon>
             <Soon>Carteira e segurança</Soon>
@@ -94,11 +98,11 @@ export function SiteFooter() {
             <Soon>Denunciar item</Soon>
           </ul>
         </nav>
-        <nav aria-labelledby="footer-categories">
-          <h2 id="footer-categories" className="mb-3 text-xl font-bold">
+        <nav aria-labelledby="footer-categories" className="grid content-start gap-2">
+          <h2 id="footer-categories" className={heading}>
             Coleções
           </h2>
-          <ul className="grid gap-2">
+          <ul>
             {FOOTER_CATEGORIES.map((c) => (
               <li key={c}>
                 <Link to="/" search={{ categories: [c] }} hash="mercado" className={linkClass}>
@@ -108,28 +112,28 @@ export function SiteFooter() {
             ))}
           </ul>
         </nav>
-        <div className="col-span-2 grid content-start gap-6 md:col-span-1">
-          <section aria-labelledby="footer-social">
-            <h2 id="footer-social" className="mb-3 text-xl font-bold">
+        <div className="col-span-2 grid content-start gap-8 md:col-span-1">
+          <section aria-labelledby="footer-social" className="grid gap-5">
+            <h2 id="footer-social" className={heading}>
               Redes sociais
             </h2>
-            <ul className="flex gap-2">
+            <ul className="flex gap-2.5">
               {SOCIAL.map(({ label, Icon }) => (
                 <li key={label}>
                   <button
                     type="button"
                     aria-label={`Kurio no ${label}`}
                     onClick={() => unavailable(`O perfil da Kurio no ${label}`)}
-                    className="grid size-8 cursor-pointer place-items-center rounded-sm border border-primary text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                    className="grid size-[30px] cursor-pointer place-items-center rounded-md border border-primary text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-auto max-w-[19px]" />
                   </button>
                 </li>
               ))}
             </ul>
           </section>
-          <section aria-labelledby="footer-wallets">
-            <h2 id="footer-wallets" className="mb-3 text-xl font-bold">
+          <section aria-labelledby="footer-wallets" className="grid gap-3">
+            <h2 id="footer-wallets" className={heading}>
               Carteiras compatíveis
             </h2>
             <WalletsStrip />
@@ -137,10 +141,8 @@ export function SiteFooter() {
         </div>
       </div>
 
-      <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 py-4 text-center text-[15px]">
-        <span>© 2026 Kurio. Propriedade digital para todos.</span>
-        <RealtimeStatus />
-      </p>
+      <p className="mt-1.5 text-center text-sm leading-[30px]">© 2026 Kurio. Propriedade digital para todos.</p>
+      <RealtimeStatus />
     </footer>
   )
 }
@@ -148,12 +150,10 @@ export function SiteFooter() {
 /** Faixa "METAMASK · WALLETCONNECT · COINBASE" do layout (rodapé e pagamento). */
 export function WalletsStrip() {
   return (
-    <p className="inline-flex items-center gap-2 rounded-md border border-primary/60 bg-band px-2.5 py-1.5 text-[9px] font-bold tracking-[0.06em] text-accent-text">
-      <span>METAMASK</span>
-      <span aria-hidden="true">•</span>
-      <span>WALLETCONNECT</span>
-      <span aria-hidden="true">•</span>
-      <span>COINBASE</span>
+    <p className="inline-flex h-[26px] w-fit items-center rounded-lg border border-border-soft bg-band pr-0.5 pl-[11px] text-[9px] leading-3 font-bold tracking-[0.1px] whitespace-pre text-accent-text">
+      METAMASK<span aria-hidden="true">{'  •  '}</span>
+      <span className="sr-only">, </span>WALLETCONNECT<span aria-hidden="true">{'  •  '}</span>
+      <span className="sr-only">, </span>COINBASE
     </p>
   )
 }
@@ -161,13 +161,13 @@ export function WalletsStrip() {
 function Newsletter() {
   const [error, setError] = useState<string | null>(null)
   return (
-    <section aria-labelledby="newsletter-title" className="grid content-start gap-4 xl:pl-[18px]">
-      <h2 id="newsletter-title" className="text-lg leading-tight font-bold">
+    <section aria-labelledby="newsletter-title" className="grid content-start gap-3 xl:w-[357px] xl:px-4">
+      <h2 id="newsletter-title" className="text-lg leading-4 font-bold">
         Antecipe-se ao próximo lançamento
       </h2>
       <form
         noValidate
-        className="flex"
+        className="mt-1 flex h-10 rounded-lg shadow-[0_0_20px_rgb(10_6_4/0.45)]"
         onSubmit={(e) => {
           e.preventDefault()
           const input = e.currentTarget.elements.namedItem('email') as HTMLInputElement
@@ -181,7 +181,7 @@ function Newsletter() {
         }}
       >
         <label htmlFor="newsletter-email" className="sr-only">
-          E-mail para a newsletter
+          Seu e-mail para receber novidades
         </label>
         <input
           id="newsletter-email"
@@ -191,9 +191,9 @@ function Newsletter() {
           placeholder="digite seu e-mail..."
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? 'newsletter-error' : 'newsletter-hint'}
-          className="h-10 min-w-0 flex-1 rounded-l-md border border-r-0 border-input bg-band px-3 text-[15px] placeholder:text-subtle focus-visible:border-accent-text"
+          className="h-10 min-w-0 flex-1 rounded-l-lg border border-r-0 border-input bg-band pl-3 text-sm leading-4 placeholder:text-subtle focus-visible:border-accent-text"
         />
-        <Button type="submit" className="h-10 rounded-l-none text-lg">
+        <Button type="submit" className="h-10 w-[85px] rounded-l-none rounded-r-lg pr-1 pl-4 text-lg leading-4 font-bold">
           Enviar
         </Button>
       </form>
@@ -202,24 +202,20 @@ function Newsletter() {
           {error}
         </p>
       )}
-      <p id="newsletter-hint" className="text-sm leading-[22px] text-muted-foreground">
+      <p id="newsletter-hint" className="text-[13px] leading-[22px] text-muted-foreground">
         Receba lançamentos selecionados, histórias de criadores e novidades do mercado.
       </p>
     </section>
   )
 }
 
-/** Estado da conexão Socket.IO: ponto visual + texto para leitores de tela. */
+/** Estado da conexão Socket.IO para leitores de tela (o layout não tem indicador visual). */
 function RealtimeStatus() {
   const status = useSyncExternalStore(realtimeStatus.subscribe, realtimeStatus.get)
   const label = status === 'connected' ? 'conectado' : status === 'connecting' ? 'conectando' : 'desconectado'
   return (
-    <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-      <span
-        aria-hidden="true"
-        className={`size-2 rounded-full ${status === 'connected' ? 'bg-success' : status === 'connecting' ? 'animate-pulse bg-primary' : 'bg-destructive'}`}
-      />
-      <span data-testid="realtime-status">Tempo real: {label}</span>
-    </span>
+    <p role="status" className="sr-only" data-testid="realtime-status">
+      Tempo real: {label}
+    </p>
   )
 }

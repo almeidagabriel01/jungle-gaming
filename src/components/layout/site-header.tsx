@@ -1,5 +1,6 @@
 import { Link, useRouter, useRouterState } from '@tanstack/react-router'
-import { ChevronDown, LogIn, Search, ShoppingCart } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
+import { CartIcon, LoginIcon, SearchIcon } from '@/components/icons/shell-icons'
 import { DropdownMenu } from 'radix-ui'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
@@ -23,9 +24,9 @@ function useSection(): Section {
 /** O Link só se marca ativo com caminho e hash exatos; o resto da regra é de `useSection`. */
 const EXACT_HASH = { exact: true, includeHash: true } as const
 
-const navItem = 'relative block py-[22px] text-[15px] transition-colors hover:text-accent-text'
+const navItem = 'relative flex h-[45px] items-start text-base leading-[21px] transition-colors hover:text-accent-text'
 const indicator =
-  'after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 after:ease-[var(--ease-out-quint)] aria-[current=page]:font-bold aria-[current=page]:text-accent-text aria-[current=page]:after:scale-x-100'
+  'after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:translate-y-1/2 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-300 after:ease-[var(--ease-out-quint)] aria-[current=page]:font-bold aria-[current=page]:text-accent-text aria-[current=page]:after:scale-x-100'
 
 /** Cabeçalho desktop (≥ md). No mobile a navegação é a barra inferior. */
 export function SiteHeader() {
@@ -34,13 +35,13 @@ export function SiteHeader() {
   const current = (s: Section) => (section === s ? ('page' as const) : undefined)
 
   return (
-    <header className="max-md:hidden">
-      <div className="page grid grid-cols-[1fr_auto_1fr] items-center border-b border-border-soft">
-        <Link to="/" className="justify-self-start text-sm font-bold tracking-[0.1em]" aria-label="Kurio, página inicial">
+    <header className="page pt-6 max-md:hidden">
+      <div className="flex h-[45px] items-start justify-between gap-6 border-b border-primary/30 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+        <Link to="/" className="mt-2 justify-self-start text-sm leading-[18px] font-bold tracking-[1.4px]" aria-label="Kurio, página inicial">
           KURIO
         </Link>
         <nav aria-label="Principal">
-          <ul className="flex gap-10">
+          <ul className="flex gap-6 lg:gap-10">
             <li>
               <Link to="/" hash="" activeOptions={EXACT_HASH} aria-current={current('home')} className={cn(navItem, indicator)}>
                 Início
@@ -63,22 +64,22 @@ export function SiteHeader() {
             </li>
           </ul>
         </nav>
-        <div className="flex items-center gap-4 justify-self-end">
+        <div className="flex items-start gap-7 justify-self-end">
           <SearchDialog
             trigger={
-              <Button variant="ghost" size="icon" aria-label="Buscar NFTs">
-                <Search className="size-6" />
-              </Button>
+              <button type="button" aria-label="Buscar NFTs" className="-mx-0.5 grid h-[35px] w-6 cursor-pointer place-items-center transition-colors hover:text-accent-text">
+                <SearchIcon className="size-5" />
+              </button>
             }
           />
           <Link
             to="/cart"
             aria-label={`Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`}
-            className="relative grid size-10 place-items-center rounded-md transition-colors hover:bg-raised"
+            className="relative block h-[35px] w-[31px] pt-1.5 transition-colors hover:text-accent-text"
           >
-            <ShoppingCart className="size-6" />
+            <CartIcon className="size-6" />
             {count > 0 && (
-              <span key={count} aria-hidden="true" className="absolute top-0.5 right-0 grid min-w-4 animate-[rise_400ms_var(--ease-out-quint)] place-items-center rounded-full bg-primary px-1 text-[10px] leading-4 font-bold text-primary-foreground">
+              <span key={count} aria-hidden="true" className="absolute top-1.5 left-[15px] grid h-4 min-w-4 animate-[rise_400ms_var(--ease-out-quint)] place-items-center rounded-full bg-primary px-[3px] text-[10px] leading-[13px] font-medium text-primary-foreground ring-2 ring-background">
                 {count}
               </span>
             )}
@@ -98,9 +99,9 @@ function AccountMenu() {
 
   if (!user) {
     return (
-      <Button asChild size="sm" className="h-[35px] px-2.5 text-base font-medium">
+      <Button asChild className="h-[35px] w-[100px] gap-1 px-0 text-base leading-[21px] font-medium">
         <Link to="/login" search={{ redirect: href === '/login' ? undefined : href }}>
-          <LogIn className="size-5" />
+          <LoginIcon className="size-5" />
           Entrar
         </Link>
       </Button>
@@ -111,11 +112,12 @@ function AccountMenu() {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <Button variant="outline" size="sm" className="h-[35px] gap-2 px-2 font-medium text-foreground" aria-label={`Conta de ${user.name}`}>
+        <Button variant="outline" className="h-[35px] gap-2 px-2 text-base leading-[21px] font-medium text-foreground">
           <span aria-hidden="true" className="grid size-6 place-items-center overflow-hidden rounded-full bg-primary text-xs font-bold text-primary-foreground">
             {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="size-full object-cover" /> : user.name.charAt(0)}
           </span>
           {user.name.split(' ')[0]}
+          <span className="sr-only">: menu da conta</span>
           <ChevronDown className="size-4 text-accent-text" />
         </Button>
       </DropdownMenu.Trigger>

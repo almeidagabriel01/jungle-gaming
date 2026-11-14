@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { Heart } from 'lucide-react'
+import { HeartFilledIcon, HeartIcon } from '@/components/icons/shell-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import type { Nft } from '@/contracts/nft'
@@ -26,7 +26,7 @@ export function FavoriteButton({ nft, variant = 'button', className }: { nft: Nf
     }
     toggle.mutate({ nft, favorite: !isFavorite })
   }
-  const heart = <Heart className={cn('transition-transform duration-300', isFavorite && 'scale-110 fill-current')} />
+  const heart = isFavorite ? <HeartFilledIcon className="animate-[rise_300ms_var(--ease-out-quint)]" /> : <HeartIcon />
 
   if (variant === 'icon') {
     return (
@@ -37,7 +37,7 @@ export function FavoriteButton({ nft, variant = 'button', className }: { nft: Nf
         disabled={user !== null && favorites.isPending}
         onClick={onClick}
         className={cn(
-          'grid size-[35px] cursor-pointer place-items-center rounded-full border border-border-soft bg-background/85 text-accent-text backdrop-blur-sm transition-transform active:scale-90 disabled:opacity-50 [&_svg]:size-[18px]',
+          'grid size-7 cursor-pointer place-items-center rounded-full border border-border bg-raised text-accent-text transition-transform active:scale-90 disabled:opacity-50 [&_svg]:h-auto [&_svg]:w-[15px]',
           className,
         )}
       >

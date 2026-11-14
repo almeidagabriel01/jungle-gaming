@@ -28,7 +28,7 @@ export function AccountLayout({ children }: { children: ReactNode }) {
   const router = useRouter()
   return (
     <div className="page grid items-start gap-6 pt-4 md:grid-cols-[310px_1fr] md:gap-7 md:pt-8">
-      <nav aria-labelledby="account-nav-title" className="md:rounded-sm md:bg-card md:pb-1">
+      <nav aria-label="Menu da conta" className="min-w-0 md:rounded-sm md:bg-card md:pb-1">
         <h2 id="account-nav-title" className="px-2.5 pt-2 pb-2 text-xl font-bold md:pt-6">
           Meu perfil
         </h2>

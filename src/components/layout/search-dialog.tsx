@@ -1,5 +1,5 @@
-import { useNavigate } from '@tanstack/react-router'
-import { Search } from 'lucide-react'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { SearchIcon } from '@/components/icons/shell-icons'
 import { useId, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -10,6 +10,7 @@ import { formValues } from '@/lib/forms'
 export function SearchDialog({ trigger }: { trigger: ReactNode }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const onCatalog = useRouterState({ select: (s) => s.location.pathname === '/' })
   const inputId = useId()
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -24,7 +25,8 @@ export function SearchDialog({ trigger }: { trigger: ReactNode }) {
             e.preventDefault()
             const q = (formValues(e.currentTarget).q ?? '').trim()
             setOpen(false)
-            void navigate({ to: '/', search: { q }, hash: 'mercado' })
+            // No catálogo a busca compõe com os filtros atuais; de outra tela começa do zero.
+            void navigate({ to: '/', search: onCatalog ? (prev) => ({ ...prev, q, page: 1 }) : { q }, hash: 'mercado' })
           }}
         >
           <label htmlFor={inputId} className="sr-only">
@@ -32,7 +34,7 @@ export function SearchDialog({ trigger }: { trigger: ReactNode }) {
           </label>
           <Input id={inputId} name="q" type="search" autoComplete="off" placeholder="Ex.: Emerald Ape" className="flex-1" />
           <Button type="submit" size="icon" aria-label="Buscar">
-            <Search />
+            <SearchIcon />
           </Button>
         </form>
       </DialogContent>

@@ -26,15 +26,16 @@ export const eth = {
   eq: (a: Eth, b: Eth): boolean => new D(a).equals(b),
   min: (...values: Eth[]): Eth => toEth(D.min(...values)),
   max: (...values: Eth[]): Eth => toEth(D.max(...values)),
+  /** Centésimos inteiros (escala do slider de preço), arredondando para fora da faixa. */
+  toCents: (a: Eth, mode: 'floor' | 'ceil'): number => new D(a).times(100)[mode]().toNumber(),
+  fromCents: (cents: number): Eth => toEth(new D(cents).dividedBy(100)),
 }
 
-const intFormatter = new Intl.NumberFormat('pt-BR')
-
 /**
- * Formata para exibição (pt-BR) com o valor exato: nunca arredonda casas significativas
- * e mantém ao menos 2 casas. Tudo por string/BigInt, sem passar por float.
+ * Formata como no layout ("1.19 ETH", "26.846 ETH"): ponto decimal, valor exato (nunca arredonda
+ * casas significativas) e ao menos 2 casas. Tudo por string, sem passar por float.
  */
 export function formatEth(value: Eth): string {
   const [int = '0', frac = ''] = new D(value).toFixed().split('.')
-  return `${intFormatter.format(BigInt(int))},${frac.padEnd(2, '0')} ETH`
+  return `${int}.${frac.padEnd(2, '0')} ETH`
 }

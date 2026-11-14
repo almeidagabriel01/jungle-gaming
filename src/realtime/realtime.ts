@@ -103,8 +103,10 @@ function applyOrderUpdated(qc: QueryClient, event: OrderUpdatedEvent) {
   )
   // O evento só traz o estado; o recibo completo (hash, links) vem da API.
   void qc.invalidateQueries({ queryKey: keys.orders(userId) })
+  if (next === 'confirmed') void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()) })
+  // Na tela do próprio pedido a região viva da página já anuncia a mudança (sem aviso duplicado).
+  if (window.location.pathname === `/orders/${orderId}`) return
   if (next === 'confirmed') {
-    void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()) })
     announce('Pagamento confirmado. Seu pedido foi concluído.', { topic: 'order' })
   } else if (next === 'declined') {
     announce(`Pagamento recusado${failureReason ? `: ${failureReason}` : ''}. Seus itens continuam no carrinho.`, { topic: 'order', tone: 'error' })

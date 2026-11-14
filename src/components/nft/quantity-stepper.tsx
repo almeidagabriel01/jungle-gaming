@@ -1,9 +1,39 @@
-import { Minus, Plus } from 'lucide-react'
 import { cn } from 'cn'
 
+/** Sinais dos botões do layout: barra de 15×2 / 9×1 (ou 9×2 no carrinho mobile), em currentColor. */
+const Minus = () => (
+  <svg viewBox="0 0 15 15" aria-hidden="true" fill="currentColor">
+    <rect y="6.5" width="15" height="2" rx="1" />
+  </svg>
+)
+const Plus = () => (
+  <svg viewBox="0 0 15 15" aria-hidden="true" fill="currentColor">
+    <rect y="6.5" width="15" height="2" rx="1" />
+    <rect x="6.5" width="2" height="15" rx="1" />
+  </svg>
+)
+
 /**
- * Quantidade com os botões laranja do layout. Inteiros entre `min` e `max` (disponibilidade
- * da edição); o valor é anunciado pelo nome do grupo e os limites desabilitam os botões.
+ * Medidas dos frames:
+ * - `md`: detalhe desktop, pílula laranja 33×50 (ícone 15, número 20/28);
+ * - `sm`: carrinho desktop e detalhe mobile, pílula 20×30 (ícone 9, número 17/24);
+ * - `cart`: `sm` no desktop e, no mobile, botão redondo 24 Surface Raised com borda (carrinho mobile).
+ * Os alvos menores que 24 px cumprem a WCAG 2.5.8 pelo espaçamento (o número fica entre os botões).
+ */
+const SIZES = {
+  md: { group: 'gap-3', button: 'h-[50px] w-[33px] shadow-[0_6.6px_19.8px_-3.3px_rgb(20_13_10/0.15)] [&_svg]:size-[15px]', value: 'text-xl leading-7' },
+  sm: { group: 'gap-3', button: 'h-[30px] w-5 shadow-[0_4px_12px_-2px_rgb(20_13_10/0.15)] [&_svg]:size-[9px]', value: 'text-[17px] leading-6' },
+  cart: {
+    group: 'gap-2 md:gap-3',
+    button:
+      'size-6 border-border bg-raised text-foreground disabled:text-border-soft md:h-[30px] md:w-5 md:border-background md:bg-primary md:text-primary-foreground md:shadow-[0_4px_12px_-2px_rgb(20_13_10/0.15)] md:disabled:text-primary-foreground [&_svg]:size-[9px]',
+    value: 'text-[17px] leading-6',
+  },
+} as const
+
+/**
+ * Quantidade com os botões do layout. Inteiros entre `min` e `max` (disponibilidade da edição);
+ * o valor é anunciado pelo nome do grupo e os limites desabilitam os botões.
  */
 export function QuantityStepper({
   value,
@@ -20,23 +50,24 @@ export function QuantityStepper({
   onChange: (value: number) => void
   /** Nome acessível do grupo, ex.: "Quantidade de Emerald Ape #042". */
   label: string
-  size?: 'md' | 'sm'
+  size?: keyof typeof SIZES
   disabled?: boolean
 }) {
+  const s = SIZES[size]
   const button = cn(
-    'grid shrink-0 cursor-pointer place-items-center bg-primary text-primary-foreground transition-[transform,background-color] hover:bg-[#dd9a5f] active:scale-90 disabled:cursor-not-allowed disabled:bg-raised disabled:text-subtle',
-    size === 'md' ? 'h-12 w-8 rounded-full [&_svg]:size-5' : 'size-[22px] rounded-full [&_svg]:size-3.5',
+    'grid shrink-0 cursor-pointer place-items-center rounded-full border border-background bg-primary text-primary-foreground transition-[transform,background-color] hover:brightness-110 active:scale-90 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:active:scale-100',
+    s.button,
   )
   return (
-    <div role="group" aria-label={label} className={cn('inline-flex items-center', size === 'md' ? 'gap-3' : 'gap-2')}>
+    <div role="group" aria-label={label} className={cn('inline-flex items-center', s.group)}>
       <button type="button" className={button} aria-label="Diminuir quantidade" disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
-        <Minus strokeWidth={3} />
+        <Minus />
       </button>
-      <output aria-live="polite" className={cn('min-w-6 text-center', size === 'md' ? 'text-lg' : 'text-[17px]')}>
+      <output aria-live="polite" className={cn('min-w-[11px] text-center tabular-nums', s.value)}>
         {value}
       </output>
       <button type="button" className={button} aria-label="Aumentar quantidade" disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
-        <Plus strokeWidth={3} />
+        <Plus />
       </button>
     </div>
   )
