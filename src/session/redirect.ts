@@ -1,9 +1,13 @@
 import { z } from 'zod'
 
-/** Só caminhos internos (`/algo`), nunca `//host` ou URL absoluta: evita open redirect. */
+/**
+ * Só caminhos internos (`/algo`), nunca `//host` ou URL absoluta: evita open redirect.
+ * A âncora (`#mercado`) é descartada: voltar do login é navegação nova e abre a tela no topo.
+ */
 export const safeRedirect = z
   .string()
   .regex(/^\/(?![/\\])/)
+  .transform((path) => path.split('#', 1)[0]!)
   .optional()
   .catch(undefined)
 
