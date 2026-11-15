@@ -55,3 +55,4 @@ export async function waitForApp(page: Page) {
 }
 
 export { expect }
+export type { Mock }
