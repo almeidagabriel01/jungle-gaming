@@ -16,6 +16,15 @@ const router = createRouter({
   scrollRestoration: true,
 })
 
+// O hash (#mercado, #diario) é um pedido de rolagem, não estado da tela. Depois que o router rola até a âncora
+// (o listener dele vem do `createRouter`, antes deste), a entrada é trocada pela mesma URL sem o hash e sem mexer
+// na rolagem. Assim recarregar ou compartilhar o link não pula de novo para a seção e o `redirect` do login não
+// carrega a âncora. Voltar e avançar restauram a posição normalmente.
+router.subscribe('onRendered', ({ toLocation }) => {
+  if (!toLocation.hash) return
+  void router.navigate({ href: toLocation.pathname + toLocation.searchStr, replace: true, resetScroll: false })
+})
+
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router

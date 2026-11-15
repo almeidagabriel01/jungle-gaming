@@ -3,13 +3,14 @@ import { Dialog as DialogPrimitive } from 'radix-ui'
 import type { ReactNode } from 'react'
 import { cn } from 'cn'
 import { FacebookLogo, GoogleLogo } from '@/components/brand-icons'
+import { HomePage } from '@/components/home/home-page'
 import { CloseIcon } from '@/components/icons/auth-icons'
+import { NFT_SEARCH_DEFAULTS } from '@/contracts/nft'
 import { unavailable } from '@/lib/unavailable'
 import { DESKTOP_QUERY, useMediaQuery } from '@/lib/use-media-query'
 import { isPrivatePath } from '@/session/session'
 
 type Mode = 'login' | 'register'
-
 
 type AuthScreenProps = {
   mode: Mode
@@ -19,7 +20,7 @@ type AuthScreenProps = {
   children: ReactNode
 }
 
-/** Desktop: modal sobre um fundo decorativo. Mobile: tela cheia com a marca e o link para a outra tela. */
+/** Desktop: modal sobre a página inicial. Mobile: tela cheia com a marca e o link para a outra tela. */
 export function AuthScreen({ mode, title, description, redirect, children }: AuthScreenProps) {
   // Mesmo breakpoint (md) do cabeçalho desktop: um único formulário no DOM, só o invólucro muda.
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -107,25 +108,14 @@ export function AuthScreen({ mode, title, description, redirect, children }: Aut
   )
 }
 
-/** Composição estática do herói da página inicial atrás do modal: decorativa, fora da árvore acessível e sem consultar a API. */
+/**
+ * A página inicial real atrás do modal (mesmos componentes e a mesma query do catálogo, já em cache para quando
+ * o login volta ao início). Fica inerte e fora da árvore acessível; o foco fica preso no diálogo.
+ */
 function AuthBackdrop() {
   return (
-    <div aria-hidden="true" inert className="page pt-3 select-none">
-      <div className="relative ml-[5px] h-[450px] overflow-hidden">
-        <p className="absolute top-[68px] left-[43px] text-sm leading-4 font-medium tracking-[1.4px]">Bem-vindo à Kurio</p>
-        <p className="absolute top-[91px] left-10 w-[600px] text-[43px] leading-[70px] font-bold">
-          SEJA DONO DO FUTURO
-          <br />
-          DA ARTE DIGITAL
-        </p>
-        <p className="absolute top-[236px] left-[43px] w-[557px] text-sm leading-6 text-muted-foreground">
-          Descubra NFTs selecionados de criadores independentes e colecione arte digital verificada.
-        </p>
-        <span className="absolute top-[325px] left-[41px] grid h-10 w-[140px] place-items-center rounded-md bg-primary text-base leading-5 font-bold text-primary-foreground">
-          EXPLORAR
-        </span>
-        <img src="/nfts/emerald-960.webp" alt="" className="absolute top-0 right-0 size-[450px] rounded-2xl object-cover" />
-      </div>
+    <div aria-hidden="true" inert data-testid="auth-backdrop" className="select-none">
+      <HomePage search={NFT_SEARCH_DEFAULTS} />
     </div>
   )
 }
