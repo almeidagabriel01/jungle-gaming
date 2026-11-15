@@ -174,7 +174,7 @@ export function HeroMobile() {
                 width={480}
                 height={480}
                 loading="lazy"
-                className="absolute top-[64%] left-[10%] w-[42%] rounded-[16px] object-cover"
+                className="absolute top-[64%] left-[10%] aspect-square w-[42%] rounded-[16px] object-cover"
               />
             )}
           </>
