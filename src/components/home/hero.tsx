@@ -130,7 +130,11 @@ export function HeroDesktop() {
   )
 }
 
-/** Herói mobile (frame Mobile / Início › Hero Banner: 366×190 r30, texto 188 + artes 138/58 r16). */
+/**
+ * Herói mobile (frame Mobile / Início › Hero Banner: 366×190 r30, texto 188 + artes 138/58 r16).
+ * O frame tem 414 px; abaixo disso a arte encolhe (até 96 px) e o texto mantém os 188 px, senão o título
+ * quebra em três linhas e o EXPLORAR sai do banner. Em telas ainda menores o banner cresce em vez de cortar.
+ */
 export function HeroMobile() {
   const featured = useFeaturedNfts()
   const { slides, index, setIndex, pause } = useSlides(featured.data?.items)
@@ -138,12 +142,12 @@ export function HeroMobile() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate grid h-[190px] grid-cols-[minmax(0,188px)_138px] content-start justify-between gap-x-2 overflow-hidden rounded-[30px] bg-background bg-linear-to-b from-primary/20 to-primary/10 px-4 pt-1.5"
+      className="relative isolate grid min-h-[190px] grid-cols-[minmax(0,188px)_clamp(96px,calc(100%-196px),138px)] content-start justify-between gap-x-2 overflow-hidden rounded-[30px] bg-background bg-linear-to-b from-primary/20 to-primary/10 px-4 pt-1.5 pb-7"
       {...pause}
     >
       <div aria-hidden="true" className="absolute -top-[31px] -left-20 -z-10 size-[248px] rounded-full bg-linear-to-b from-[#dd9a5f]/40 to-[#d28a4c]/5" />
       <div aria-hidden="true" className="absolute -top-2.5 left-[73px] -z-10 size-[248px] rounded-full bg-linear-to-b from-[#dd9a5f]/35 to-transparent" />
-      <div className="grid h-[156px] grid-rows-[1fr_auto]">
+      <div className="grid min-h-[156px] grid-rows-[1fr_auto]">
         <div className="grid content-start gap-1.5">
           <p className="text-xs leading-4 font-medium">Bem-vindo à Kurio</p>
           <h1 id="hero-title" className="text-lg leading-[29px] font-bold uppercase">
@@ -157,12 +161,12 @@ export function HeroMobile() {
           EXPLORAR <ArrowRightIcon className="size-4 text-primary" />
         </Link>
       </div>
-      <div className="relative mt-1.5 h-[146px] w-[138px]">
+      <div className="relative mt-1.5 aspect-[138/146] w-full">
         {featured.isPending || featured.isError ? (
-          <Skeleton className="size-[138px] rounded-[16px]" />
+          <Skeleton className="aspect-square w-full rounded-[16px]" />
         ) : (
           <>
-            <SlideArt slides={slides} index={index} sizes="138px" className="size-[138px] rounded-[16px] bg-card" />
+            <SlideArt slides={slides} index={index} sizes="138px" className="aspect-square w-full rounded-[16px] bg-card" />
             {next && (
               <img
                 src={next.images[0]!.thumbnailUrl}
@@ -170,7 +174,7 @@ export function HeroMobile() {
                 width={480}
                 height={480}
                 loading="lazy"
-                className="absolute top-[88px] left-[14px] size-[58px] rounded-[16px] object-cover"
+                className="absolute top-[64%] left-[10%] w-[42%] rounded-[16px] object-cover"
               />
             )}
           </>
