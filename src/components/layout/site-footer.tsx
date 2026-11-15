@@ -37,11 +37,15 @@ const Soon = ({ children }: { children: string }) => (
   </li>
 )
 
-/** Rodapé do frame Desktop / Início (1200×610): serviços + newsletter, faixa da marca, links e copyright. */
+/**
+ * Rodapé do frame Desktop / Início (1200×610): serviços + newsletter, faixa da marca, links e copyright.
+ * Faixa de serviços no xl: colunas de 265 px coladas (o fio fica no px-4 de cada uma) e newsletter de 357 px,
+ * com 16 px de respiro à direita do card (32 + 3 × 265 + 357 + 16 = 1200).
+ */
 export function SiteFooter() {
   return (
     <footer className="page mt-24 pb-28 md:pb-6">
-      <div className="grid gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-7 xl:pb-4">
+      <div className="grid gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-0 xl:pr-4 xl:pb-4">
         {FEATURES.map((f) => (
           <section key={f.mark} className="grid content-start gap-3 xl:w-[265px] xl:shrink-0 xl:border-r xl:border-primary xl:px-4">
             <span aria-hidden="true" className="grid size-[74px] place-items-center rounded-full bg-primary text-2xl leading-8 font-bold text-primary-foreground">
@@ -133,7 +137,8 @@ export function SiteFooter() {
             </ul>
           </section>
           <section aria-labelledby="footer-wallets" className="grid gap-3">
-            <h2 id="footer-wallets" className={heading}>
+            {/* Uma linha como no layout: o texto passa 3 px da coluna de 227 px, dentro do respiro do card. */}
+            <h2 id="footer-wallets" className={`${heading} xl:whitespace-nowrap`}>
               Carteiras compatíveis
             </h2>
             <WalletsStrip />
