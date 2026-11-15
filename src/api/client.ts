@@ -47,6 +47,10 @@ export const setSessionExpiredHandler = (fn: () => void) => {
   onExpired = fn
 }
 
+/**
+ * Requests concorrentes que recebem 401 dividem o mesmo refresh, e a expiração é tratada uma única vez
+ * (um aviso, uma navegação). Sem sessão (já expirada ou encerrada), não há o que avisar de novo.
+ */
 function refreshSession(): Promise<RefreshResult> {
   const used = sessionStore.get()?.tokens.refreshToken
   if (!used) return Promise.resolve('expired')
@@ -60,6 +64,10 @@ function refreshSession(): Promise<RefreshResult> {
     })
     // Só a recusa do servidor encerra a sessão; rede/timeout/5xx devolvem o erro original.
     .catch((e: unknown): RefreshResult => (e instanceof AxiosError && (e.response?.status === 400 || e.response?.status === 401) ? 'expired' : 'transient'))
+    .then((result) => {
+      if (result === 'expired') onExpired()
+      return result
+    })
     .finally(() => {
       refreshing = null
     })
@@ -75,7 +83,6 @@ http.interceptors.response.use(undefined, async (error: unknown) => {
       config._retried = true
       const result = await refreshSession()
       if (result === 'ok') return http.request(config)
-      if (result === 'expired') onExpired()
     }
   }
   throw toApiError(error)
