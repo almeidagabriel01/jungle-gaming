@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { expect, test, USERS, type Mock } from './fixtures'
 import { firstCartLine, orders, orderView, reviewFromCart, SLOW_SETTLE } from './helpers/checkout'
+import { cartLink, logout } from './helpers/account'
 
 const status = (page: Page) => page.getByTestId('realtime-status')
 const notices = (page: Page) => page.getByRole('list', { name: 'Alterações no carrinho' }).getByRole('listitem')
@@ -166,5 +167,44 @@ test.describe('robustez do tempo real', () => {
     releaseClient()
     await expect(status(page)).toHaveText('Tempo real: conectado')
     await expect(price).toHaveText('6.00 ETH')
+  })
+})
+
+test.describe('troca de usuário no tempo real', () => {
+  test('eventos da sessão da Ana não afetam o Bruno; nft.updated público continua aplicado', async ({ page, mock }) => {
+    await page.clock.install()
+    await mock.open('/', 'payment-slow')
+    await mock.login(USERS.ana)
+    await (await reviewFromCart(page)).click()
+    await expect(orderView(page)).toHaveAttribute('data-status', 'pending')
+    const anaOrder = (await orders(mock.server)).at(-1)!
+    const line = await firstCartLine(mock.server, USERS.ana.id)
+
+    await logout(page, USERS.ana.name)
+    await mock.login(USERS.bruno)
+    await page.goto(`/nfts/${line.nftId}`)
+    await expect(status(page)).toHaveText('Tempo real: conectado')
+
+    // Eventos da Ana pelo socket real: order.updated do pedido dela (versão nova) e nft.updated.
+    await mock.server((m, a) => {
+      m.emitRaw({
+        eventId: 'evt_sessao_ana_pedido',
+        type: 'order.updated',
+        resource: { type: 'order', id: a.orderId },
+        version: 999,
+        occurredAt: new Date().toISOString(),
+        payload: { orderId: a.orderId, userId: a.userId, status: 'confirmed', failureReason: null },
+      })
+      m.updateEdition(a.nftId, a.editionId, { price: '7.77' })
+    }, { orderId: anaOrder.id, userId: USERS.ana.id, nftId: line.nftId, editionId: line.editionId })
+
+    // Público: o preço novo chega ao Bruno. Privado: nada da Ana aparece nem muda.
+    await expect(page.getByText('7.77 ETH').first()).toBeVisible()
+    await expect(cartLink(page)).toHaveAccessibleName('Carrinho, 0 itens')
+    await expect(notices(page)).toHaveCount(0)
+    await expect(page.getByText(USERS.ana.name)).toHaveCount(0)
+    await page.goto(`/orders/${anaOrder.id}`)
+    await expect(orderView(page)).toHaveCount(0)
+    expect((await orders(mock.server)).find((o) => o.id === anaOrder.id)!.status).toBe('pending')
   })
 })
