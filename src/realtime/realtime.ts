@@ -126,10 +126,13 @@ function applyOrderUpdated(qc: QueryClient, event: OrderUpdatedEvent) {
   // Isolamento: evento de pedido de outra conta nunca toca o cache desta sessão.
   if (!userId || event.payload.userId !== userId) return
   const { orderId, status: next, failureReason } = event.payload
-  qc.setQueryData<Order>(keys.order(userId, orderId), (order) =>
-    order && order.version < event.version ? { ...order, status: next, failureReason, version: event.version } : order,
-  )
-  // O evento só traz o estado; o recibo completo (hash, links) vem da API.
+  // O evento só traz o estado; o recibo completo (hash, links) vem da API. `confirmed` só aparece
+  // completo: até o refetch o pedido segue pendente, sem recibo pela metade.
+  if (next !== 'confirmed') {
+    qc.setQueryData<Order>(keys.order(userId, orderId), (order) =>
+      order && order.version < event.version ? { ...order, status: next, failureReason, version: event.version } : order,
+    )
+  }
   void qc.invalidateQueries({ queryKey: keys.orders(userId) })
   if (next === 'confirmed') void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()) })
   // Na tela do próprio pedido a região viva da página já anuncia a mudança (sem aviso duplicado).

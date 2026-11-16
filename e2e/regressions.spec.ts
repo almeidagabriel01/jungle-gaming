@@ -76,3 +76,18 @@ test('POST /orders revalida o cupom aceito na cotação', async ({ page, mock })
   expect(result.status).toBe(422)
   expect(result.body.error.code).toBe('COUPON_EXPIRED')
 })
+
+test('recibo confirmado só aparece completo, com o ID da transação', async ({ page, mock }) => {
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  await buyCart(page)
+  const view = page.getByTestId('order-view')
+  await expect(view).toHaveAttribute('data-status', 'pending')
+
+  // Leituras lentas: o refetch do recibo demora mais que o evento `order.updated`.
+  await mock.server((m) => m.setScenario('slow'))
+  await mock.server((m) => m.settleNow())
+  await expect(view).toHaveAttribute('data-status', 'confirmed')
+  // Sem espera: no instante em que vira confirmado, o hash já está lá.
+  expect(await page.locator('dt:has-text("ID da transação") + dd').textContent()).not.toBe('—')
+})
