@@ -180,6 +180,8 @@ test.describe('troca de usuário no tempo real', () => {
     const anaOrder = (await orders(mock.server)).at(-1)!
     const line = await firstCartLine(mock.server, USERS.ana.id)
 
+    // A tela do pedido é a do checkout (sem header): sai a partir da vitrine, na mesma aba.
+    await page.goto('/')
     await logout(page, USERS.ana.name)
     await mock.login(USERS.bruno)
     await page.goto(`/nfts/${line.nftId}`)
@@ -198,8 +200,13 @@ test.describe('troca de usuário no tempo real', () => {
       m.updateEdition(a.nftId, a.editionId, { price: '7.77' })
     }, { orderId: anaOrder.id, userId: USERS.ana.id, nftId: line.nftId, editionId: line.editionId })
 
-    // Público: o preço novo chega ao Bruno. Privado: nada da Ana aparece nem muda.
-    await expect(page.getByText('7.77 ETH').first()).toBeVisible()
+    // Público: o preço novo chega ao Bruno (na edição alterada). Privado: nada da Ana aparece nem muda.
+    const editionName = await mock.server(
+      (m, a) => m.snapshot().nfts.find((n) => n.id === a.nftId)!.editions.find((e) => e.id === a.editionId)!.name,
+      line,
+    )
+    await page.getByRole('radio', { name: editionName, exact: true }).click()
+    await expect(page.getByText('7.77 ETH').filter({ visible: true }).first()).toBeVisible()
     await expect(cartLink(page)).toHaveAccessibleName('Carrinho, 0 itens')
     await expect(notices(page)).toHaveCount(0)
     await expect(page.getByText(USERS.ana.name)).toHaveCount(0)
