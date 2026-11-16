@@ -1,32 +1,33 @@
-import type { Page } from '@playwright/test'
+import type { Page, TestInfo } from '@playwright/test'
 import { expect, test, USERS } from './fixtures'
 import { logout } from './helpers/account'
 
 const NOTE = 'Entregar na carteira principal'
 const draft = (page: Page, userId: string) => page.evaluate((id) => sessionStorage.getItem(`jungle-checkout-draft:${id}`), userId)
 
-/** Observação do pagamento (no mobile fica sob "Editar dados"). */
-async function noteField(page: Page) {
-  const edit = page.getByRole('button', { name: 'Editar dados' })
-  if (await edit.isVisible()) await edit.click()
+/** Observação do pagamento (no mobile os dados do colecionador ficam fechados sob "Editar dados"). */
+async function noteField(page: Page, info: TestInfo) {
+  if (info.project.name === 'mobile') await page.getByRole('button', { name: 'Editar dados', expanded: false }).click()
   return page.getByLabel('Observação do colecionador (opcional)')
 }
 
 test.describe('rascunho do checkout', () => {
-  test('logout apaga o rascunho: ao voltar na mesma aba, o formulário vem vazio', async ({ page, mock }) => {
+  test('logout apaga o rascunho: ao voltar na mesma aba, o formulário vem vazio', async ({ page, mock }, info) => {
     await mock.open('/')
     await mock.login(USERS.ana)
     await page.goto('/cart')
     await page.getByRole('link', { name: 'Conectar e finalizar' }).click()
-    await (await noteField(page)).fill(NOTE)
+    await (await noteField(page, info)).fill(NOTE)
     await expect.poll(() => draft(page, USERS.ana.id)).toContain(NOTE)
 
+    // O checkout mobile é tela cheia (sem a barra com a conta): sai pela página inicial.
+    await page.goto('/')
     await logout(page, USERS.ana.name)
     expect(await draft(page, USERS.ana.id)).toBeNull()
 
     await mock.login(USERS.ana)
     await page.goto('/checkout')
-    await expect(await noteField(page)).toHaveValue('')
+    await expect(await noteField(page, info)).toHaveValue('')
   })
 
   test('login de outro usuário apaga o rascunho dos outros e mantém o dele', async ({ page, mock }) => {
