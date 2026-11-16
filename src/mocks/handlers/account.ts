@@ -47,7 +47,7 @@ export const accountHandlers = [
   http.patch(
     `${API}/me/profile`,
     route(async ({ request }) => {
-      const body = await parseBody(UpdateProfileBody, request)
+      const body = await parseBody(UpdateProfileBody, request, authenticate)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const auth = authenticate(tx, request)
@@ -68,7 +68,7 @@ export const accountHandlers = [
   http.put(
     `${API}/me/avatar`,
     route(async ({ request }) => {
-      const body = await parseBody(AvatarBody, request)
+      const body = await parseBody(AvatarBody, request, authenticate)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const auth = authenticate(tx, request)
@@ -83,7 +83,7 @@ export const accountHandlers = [
   http.post(
     `${API}/me/password`,
     route(async ({ request }) => {
-      const body = await parseBody(ChangePasswordBody, request)
+      const body = await parseBody(ChangePasswordBody, request, authenticate)
       if (!body.ok) return body.response
       const user = withDb((tx) => {
         const auth = authenticate(tx, request)
@@ -116,7 +116,7 @@ export const accountHandlers = [
   http.post(
     `${API}/me/wallets`,
     route(async ({ request }) => {
-      const body = await parseBody(WalletBody, request)
+      const body = await parseBody(WalletBody, request, authenticate)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const auth = authenticate(tx, request)
@@ -139,7 +139,7 @@ export const accountHandlers = [
   http.patch<{ id: string }>(
     `${API}/me/wallets/:id`,
     route(async ({ request, params }) => {
-      const body = await parseBody(WalletBody, request)
+      const body = await parseBody(WalletBody, request, authenticate)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const auth = authenticate(tx, request)
@@ -162,7 +162,7 @@ export const accountHandlers = [
   http.post<{ id: string }>(
     `${API}/me/wallets/:id/connection`,
     route(async ({ request, params }) => {
-      const body = await parseBody(WalletConnectBody, request)
+      const body = await parseBody(WalletConnectBody, request, authenticate)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const auth = authenticate(tx, request)

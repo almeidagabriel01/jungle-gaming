@@ -120,7 +120,7 @@ export const cartHandlers = [
   http.post(
     `${API}/cart/items`,
     route(async ({ request }) => {
-      const body = await parseBody(AddCartItemBody, request)
+      const body = await parseBody(AddCartItemBody, request, resolveOwner)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const owner = resolveOwner(tx, request)
@@ -142,7 +142,7 @@ export const cartHandlers = [
   http.patch<{ itemId: string }>(
     `${API}/cart/items/:itemId`,
     route(async ({ request, params }) => {
-      const body = await parseBody(UpdateCartItemBody, request)
+      const body = await parseBody(UpdateCartItemBody, request, resolveOwner)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const owner = resolveOwner(tx, request)
@@ -177,7 +177,7 @@ export const cartHandlers = [
   http.post(
     `${API}/cart/merge`,
     route(async ({ request }) => {
-      const body = await parseBody(MergeCartBody, request)
+      const body = await parseBody(MergeCartBody, request, authenticate)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const auth = authenticate(tx, request)
@@ -202,7 +202,7 @@ export const cartHandlers = [
   http.post(
     `${API}/quotes`,
     route(async ({ request }) => {
-      const body = await parseBody(QuoteRequest, request)
+      const body = await parseBody(QuoteRequest, request, resolveOwner)
       if (!body.ok) return body.response
       return withDb((tx) => {
         const owner = resolveOwner(tx, request)

@@ -21,6 +21,9 @@ export const SCENARIOS = {
   'wallet-rejected': 'A carteira recusa a conexão',
   'payment-declined': 'Pagamento termina recusado',
   'payment-slow': 'Pagamento liquida em 15 s',
+  'read-timeout': 'Leituras nunca respondem (o cliente cai no timeout)',
+  'write-server-error': 'Escritas (login, cadastro, carrinho, cupom, favoritos, pedido, perfil, senha, carteiras) respondem 503',
+  'write-client-error': 'As mesmas escritas respondem 403 (recusa do servidor)',
 } as const
 
 export type ScenarioName = keyof typeof SCENARIOS

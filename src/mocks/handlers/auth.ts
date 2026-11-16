@@ -34,7 +34,7 @@ export const authHandlers = [
   http.post(
     `${API}/auth/register`,
     route(async ({ request }) => {
-      const body = await parseBody(RegisterBody, request)
+      const body = await parseBody(RegisterBody, request, 'public')
       if (!body.ok) return body.response
       const email = normalizeEmail(body.value.email)
       const salt = crypto.randomUUID()
@@ -68,7 +68,7 @@ export const authHandlers = [
   http.post(
     `${API}/auth/login`,
     route(async ({ request }) => {
-      const body = await parseBody(LoginBody, request)
+      const body = await parseBody(LoginBody, request, 'public')
       if (!body.ok) return body.response
       const email = normalizeEmail(body.value.email)
       const user = withDb(({ db }) => db.users.find((u) => u.email === email))
@@ -81,7 +81,7 @@ export const authHandlers = [
   http.post(
     `${API}/auth/refresh`,
     route(async ({ request }) => {
-      const body = await parseBody(RefreshBody, request)
+      const body = await parseBody(RefreshBody, request, 'public')
       if (!body.ok) return body.response
       return withDb((tx) => {
         const session = tx.db.sessions.find((s) => s.refreshToken === body.value.refreshToken)

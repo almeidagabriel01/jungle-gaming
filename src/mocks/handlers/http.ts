@@ -1,7 +1,7 @@
-import { HttpResponse, type HttpResponseResolver, type PathParams } from 'msw'
+import { delay, HttpResponse, type HttpResponseResolver, type PathParams } from 'msw'
 import type { z } from 'zod'
 import type { ErrorCode } from '@/contracts/errors'
-import { guestOwner, userOwner, type Tx } from '../db'
+import { guestOwner, userOwner, withDb, type Tx } from '../db'
 import { hasScenario, networkDelay } from '../scenarios'
 
 export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api'
@@ -16,7 +16,18 @@ export function apiError(status: number, code: ErrorCode, message: string, extra
 /** Resultado de validação/autorização: dado ou a resposta de erro pronta. */
 export type Result<T> = { ok: true; value: T } | { ok: false; response: Response }
 
-export async function parseBody<S extends z.ZodType>(schema: S, request: Request): Promise<Result<z.infer<S>>> {
+/** Checagem de identidade de uma rota: `authenticate` (conta) ou `resolveOwner` (conta ou visitante). */
+export type Guard = (tx: Tx, request: Request) => Result<string>
+
+/**
+ * Lê e valida o corpo. A identidade vem antes (§5): sessão inválida com corpo inválido responde 401, não 422.
+ * O `guard` é obrigatório para que nenhuma rota protegida valide o corpo sem autenticar; rotas abertas passam `'public'`.
+ */
+export async function parseBody<S extends z.ZodType>(schema: S, request: Request, guard: Guard | 'public'): Promise<Result<z.infer<S>>> {
+  if (guard !== 'public') {
+    const identity = withDb((tx) => guard(tx, request))
+    if (!identity.ok) return identity
+  }
   const raw: unknown = await request.json().catch(() => null)
   const parsed = schema.safeParse(raw)
   if (parsed.success) return { ok: true, value: parsed.data }
@@ -54,14 +65,21 @@ export function resolveOwner(tx: Tx, request: Request): Result<string> {
 
 /**
  * Envolve um resolver com as condições de rede do cenário ativo:
- * offline (erro de rede), 503 em leituras e latência determinística.
+ * offline (erro de rede), 503 em leituras, leitura sem resposta, falha nas escritas e latência determinística.
  */
 export function route<P extends PathParams>(resolver: HttpResponseResolver<P>): HttpResponseResolver<P> {
   return async (info) => {
     if (hasScenario('offline')) return HttpResponse.error()
     await networkDelay(info.request)
-    if (info.request.method === 'GET' && hasScenario('server-error')) {
+    const read = info.request.method === 'GET'
+    if (read && hasScenario('server-error')) {
       return apiError(503, 'SERVICE_UNAVAILABLE', 'Serviço temporariamente indisponível')
+    }
+    if (read && hasScenario('read-timeout')) await delay('infinite')
+    // Refresh e logout são manutenção da sessão, não escritas do usuário.
+    if (!read && !/\/auth\/(refresh|logout)$/.test(new URL(info.request.url).pathname)) {
+      if (hasScenario('write-server-error')) return apiError(503, 'SERVICE_UNAVAILABLE', 'Serviço temporariamente indisponível')
+      if (hasScenario('write-client-error')) return apiError(403, 'FORBIDDEN', 'O servidor recusou a operação')
     }
     return resolver(info)
   }
