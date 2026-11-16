@@ -217,6 +217,7 @@ mínimos:
 | Login/Cadastro: olho da senha (mobile) | `#55321F` (≈1,6:1) | `#B39463` | WCAG 1.4.11 |
 | Login/Cadastro: fechar, mostrar senha | ícone de 18 px | alvo de 24 px | WCAG 2.5.8 |
 | Login/Cadastro: "Crie uma conta" / "Entre" (mobile) | só cor | sublinhados | WCAG 1.4.1 |
+| Login/Cadastro desktop: texto do herói atrás do modal | "…do mundo todo e colecione arte digital verificada." | o texto do herói da home | o fundo é a página inicial real, não uma cópia |
 | Cadastro desktop: "Confirmar senha" | sem olho | com olho, como no frame mobile | mesma ação nos dois campos |
 | Detalhe: trilha | Início › Mercado | + nome do NFT | contexto da página atual |
 | Detalhe desktop: adicionar ao carrinho | só COMPRAR | botão-ícone extra ao lado de COMPRAR | adicionar sem sair da página |
