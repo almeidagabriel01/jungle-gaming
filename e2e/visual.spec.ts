@@ -12,7 +12,9 @@ const screens = [
   { name: 'detalhe', path: '/nfts/nft_001', ready: null },
   { name: 'carrinho', path: '/cart', ready: 'quote-total', login: true },
   { name: 'pagamento', path: '/checkout', ready: /^(quote|mobile)-total$/, login: true },
+  // Desktop: o modal sobre a página inicial (o catálogo de fundo entra na espera de rede ociosa abaixo).
   { name: 'login', path: '/login', ready: null },
+  { name: 'cadastro', path: '/register', ready: null },
   { name: 'perfil', path: '/profile', ready: null, login: true },
 ] as const
 
