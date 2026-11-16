@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Quote, QuoteLine } from '@/contracts/cart'
 import { formValues } from '@/lib/forms'
+import { NETWORK_LABEL } from '@/lib/labels'
 import { eth, formatEth } from '@/lib/money'
 
 /** Desconto zero aparece como no layout: "(-) 00.00". */
@@ -98,7 +99,9 @@ export function OrderTotals({ quote, error, onRetry }: { quote?: Quote; error?: 
       <div className="grid grid-cols-[1fr_auto] items-center gap-y-3">
         <dt>Taxa de rede</dt>
         <dd className="text-lg leading-4">{formatEth(quote.networkFee)}</dd>
-        <dd className="col-span-2 text-center text-xs leading-4 text-accent-text">Taxa estimada</dd>
+        <dd className="col-span-2 text-center text-xs leading-4 text-accent-text" data-testid="quote-fee-note">
+          Taxa estimada na rede {NETWORK_LABEL[quote.network]}
+        </dd>
       </div>
       </dl>
       <dl className="grid gap-3 before:border-t before:border-primary/30">

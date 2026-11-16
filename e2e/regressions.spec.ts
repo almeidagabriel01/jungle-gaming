@@ -267,3 +267,18 @@ test('reconexão do socket com access vencido renova o token e volta a receber o
   )
   await expect(page.getByText('Pagamento confirmado. Seu pedido foi concluído.')).toBeVisible()
 })
+
+test('taxa de rede do carrinho diz a rede da estimativa e o checkout acompanha a rede escolhida', async ({ page, mock, isMobile }) => {
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  await page.goto('/cart')
+  await expect(page.getByTestId('quote-total')).toBeVisible()
+  await expect(page.getByTestId('quote-fee-note')).toHaveText('Taxa estimada na rede Ethereum')
+
+  await page.getByRole('link', { name: 'Conectar e finalizar' }).click()
+  await expect(page.getByTestId('quote-fee-note')).toHaveText('Taxa estimada na rede Ethereum')
+  // No mobile os dados do perfil (com a rede) ficam recolhidos atrás de "Editar dados".
+  if (isMobile) await page.getByRole('button', { name: 'Editar dados' }).click()
+  await page.getByRole('combobox', { name: 'Rede' }).selectOption('polygon')
+  await expect(page.getByTestId('quote-fee-note')).toHaveText('Taxa estimada na rede Polygon')
+})

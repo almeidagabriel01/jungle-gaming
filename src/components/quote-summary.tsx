@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { QueryError } from '@/components/query-error'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Quote } from '@/contracts/cart'
+import { NETWORK_LABEL } from '@/lib/labels'
 import { eth, formatEth } from '@/lib/money'
 
 const ROW = 'flex h-5 items-center justify-between gap-4'
@@ -9,7 +10,7 @@ const ROW = 'flex h-5 items-center justify-between gap-4'
 const AMOUNT = 'text-right text-lg leading-4 max-md:text-base'
 
 /** Mesma grade do resumo pronto e do skeleton: nada se mexe quando os valores chegam. */
-function Layout({ subtotal, discount, discountLabel, fee, total }: Record<'subtotal' | 'discount' | 'discountLabel' | 'fee' | 'total', ReactNode>) {
+function Layout({ subtotal, discount, discountLabel, fee, feeNote, total }: Record<'subtotal' | 'discount' | 'discountLabel' | 'fee' | 'feeNote' | 'total', ReactNode>) {
   return (
     <>
       <div className={ROW}>
@@ -24,7 +25,9 @@ function Layout({ subtotal, discount, discountLabel, fee, total }: Record<'subto
       <div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 max-md:gap-y-0">
         <dt className="h-5 leading-5">Taxa de rede</dt>
         {fee}
-        <dd className="col-span-2 text-right text-xs leading-4 text-accent-text">Taxa estimada</dd>
+        <dd className="col-span-2 text-right text-xs leading-4 text-accent-text" data-testid="quote-fee-note">
+          {feeNote}
+        </dd>
       </div>
       <div className="mt-3 flex h-4 items-center justify-between gap-4 max-md:mt-0">
         <dt className="text-base leading-4 font-bold">Total</dt>
@@ -48,7 +51,7 @@ export function QuoteSummary({ quote, pending, error, onRetry }: { quote?: Quote
     )
     return (
       <dl role="status" aria-label="Calculando resumo" className="grid gap-3 text-[15px] leading-5">
-        <Layout subtotal={value('w-24')} discountLabel="Desconto do lançamento" discount={value('w-20')} fee={value('w-24')} total={value('w-28')} />
+        <Layout subtotal={value('w-24')} discountLabel="Desconto do lançamento" discount={value('w-20')} fee={value('w-24')} feeNote="Taxa estimada" total={value('w-28')} />
       </dl>
     )
   }
@@ -64,6 +67,8 @@ export function QuoteSummary({ quote, pending, error, onRetry }: { quote?: Quote
         // Desconto zero é escrito como no layout: "(-) 00.00".
         discount={<dd className="text-right">{eth.eq(quote.discount, '0') ? '(-) 00.00' : `(-) ${formatEth(quote.discount)}`}</dd>}
         fee={<dd className={AMOUNT}>{formatEth(quote.networkFee)}</dd>}
+        // A taxa depende da rede: diz qual foi usada na estimativa (a escolha final é no pagamento).
+        feeNote={`Taxa estimada na rede ${NETWORK_LABEL[quote.network]}`}
         total={
           <dd className="text-right text-lg leading-4 font-bold text-accent-text" data-testid="quote-total">
             {formatEth(quote.total)}
