@@ -88,6 +88,26 @@ test.describe('rolagem entre navegações', () => {
     await expect.poll(() => scrollY(page)).toBe(market)
   })
 
+  test('card aberto assim que o hash sai do endereço: voltar restaura o catálogo', async ({ page, mock }) => {
+    await mock.open('/')
+    const cards = page.getByTestId('catalog-grid').getByRole('article')
+    await expect(cards.first()).toBeVisible()
+    // EXPLORAR leva a /#mercado; o card é aberto pelo usuário logo que o endereço perde o hash.
+    await page.getByRole('link', { name: 'EXPLORAR' }).filter({ visible: true }).first().click()
+    await expect(page).toHaveURL((url) => url.pathname === '/' && url.hash === '')
+    const market = await scrollY(page)
+    expect(market).toBeGreaterThan(0)
+    await cards.first().getByRole('link').click()
+    await expect(page).toHaveURL(/\/nfts\//)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+    await page.goBack()
+    await expect(page).toHaveURL((url) => url.pathname === '/' && url.hash === '')
+    await expect(cards.first()).toBeVisible()
+    await expect(page.getByRole('list', { name: 'Carregando NFTs' })).toHaveCount(0)
+    await expect.poll(() => scrollY(page)).toBe(market)
+  })
+
   test('login com redirect saído de /#mercado volta ao início no topo', async ({ page, mock }) => {
     await mock.open('/login?redirect=%2F%23mercado')
     await page.getByLabel('E-mail', { exact: true }).fill(USERS.ana.email)
