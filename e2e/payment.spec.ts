@@ -82,4 +82,18 @@ test.describe('pagamento', () => {
     await expect(orderView(other)).toBeVisible()
     expect(await orders(mock.server)).toHaveLength(before + 1)
   })
+  test('logout apaga a tentativa de pedido guardada no navegador', async ({ page, mock }) => {
+    const attempt = () => page.evaluate((id) => localStorage.getItem(`jungle-order-attempt:${id}`), USERS.ana.id)
+    await mock.open('/', 'order-timeout')
+    await mock.login(USERS.ana)
+    const before = (await orders(mock.server)).length
+    await (await reviewFromCart(page)).click()
+    await expect.poll(async () => (await orders(mock.server)).length).toBe(before + 1)
+    expect(await attempt()).not.toBeNull()
+
+    await page.goto('/profile')
+    await page.getByRole('navigation', { name: 'Menu da conta' }).getByRole('button', { name: 'Sair' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    expect(await attempt()).toBeNull()
+  })
 })

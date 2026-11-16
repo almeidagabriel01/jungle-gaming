@@ -53,8 +53,12 @@ export const orderAttempt = {
    * todas (logout). Expiração não passa por aqui: o reenvio após novo login precisa da mesma chave.
    */
   clearAllExcept(keep?: string) {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith(ATTEMPT_PREFIX) && (!keep || key !== attemptKey(keep))) localStorage.removeItem(key)
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith(ATTEMPT_PREFIX) && (!keep || key !== attemptKey(keep))) localStorage.removeItem(key)
+      }
+    } catch {
+      // Storage bloqueado (modo privado): não há tentativa guardada, e login/logout seguem.
     }
   },
 }
