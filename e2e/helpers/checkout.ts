@@ -23,7 +23,7 @@ export const confirmButton = (page: Page) => page.getByRole('button', { name: /^
 
 /** "Confirmar compra (1.29 ETH)" → "1.29 ETH": o total aceito na revisão. */
 export async function acceptedTotal(confirm: Locator) {
-  return /\((.+)\)/.exec(await confirm.innerText())![1]!
+  return /\((.+)\)/.exec(await confirm.innerText())![1]
 }
 
 export const orderView = (page: Page) => page.getByTestId('order-view')
@@ -34,7 +34,7 @@ export const orders = (server: Server) => server((m) => m.snapshot().orders)
 export const firstCartLine = (server: Server, userId: string) =>
   server((m, owner) => {
     const db = m.snapshot()
-    const item = db.carts.find((c) => c.owner === owner)!.items[0]!
+    const item = db.carts.find((c) => c.owner === owner)!.items[0]
     const nft = db.nfts.find((n) => n.id === item.nftId)!
     const edition = nft.editions.find((e) => e.id === item.editionId)!
     return { nftId: nft.id, editionId: edition.id, name: nft.name, price: edition.price, available: edition.available, quantity: item.quantity }

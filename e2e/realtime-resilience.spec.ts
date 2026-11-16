@@ -37,9 +37,9 @@ test.describe('robustez do tempo real', () => {
     await mock.server((m, nftId) => {
       const events = m.recentEvents().filter((e) => e.type === 'nft.updated' && e.resource.id === nftId)
       const [older, latest] = events.slice(-2)
-      m.emitRaw(latest!)
-      m.emitRaw(older!)
-      m.emitRaw({ ...older!, eventId: 'evt_forjado_antigo' })
+      m.emitRaw(latest)
+      m.emitRaw(older)
+      m.emitRaw({ ...older, eventId: 'evt_forjado_antigo' })
     }, line.nftId)
 
     // Eventos chegam em ordem: quando o próximo evento real aparece, os reenviados já foram processados.
