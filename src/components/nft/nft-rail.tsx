@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { cn } from 'cn'
+import { QueryError } from '@/components/query-error'
 import type { Nft } from '@/contracts/nft'
 import { NftCard, NftCardSkeleton } from './nft-card'
 
@@ -16,7 +17,20 @@ export function SectionHeading({ id, children }: { id: string; children: string 
  * Carrossel horizontal (scroll-snap nativo: toque, trackpad e teclado) com os pontos de página
  * do layout. Os pontos são derivados da largura real, então funcionam em qualquer viewport.
  */
-export function NftRail({ title, items, loading = false }: { title: string; items: Nft[] | undefined; loading?: boolean }) {
+export function NftRail({
+  title,
+  items,
+  loading = false,
+  error,
+  onRetry,
+}: {
+  title: string
+  items: Nft[] | undefined
+  loading?: boolean
+  /** Falha da consulta: o trilho mostra o erro com nova tentativa no lugar dos cards. */
+  error?: unknown
+  onRetry?: () => void
+}) {
   const headingId = useId()
   const scroller = useRef<HTMLUListElement>(null)
   const [pages, setPages] = useState(1)
@@ -41,7 +55,16 @@ export function NftRail({ title, items, loading = false }: { title: string; item
     }
   }, [measure, items])
 
-  if (!loading && items?.length === 0) return null
+  if (!loading && !error && items?.length === 0) return null
+
+  if (error && onRetry) {
+    return (
+      <section aria-labelledby={headingId} className="grid gap-8">
+        <SectionHeading id={headingId}>{title}</SectionHeading>
+        <QueryError error={error} onRetry={onRetry} title="Não foi possível carregar as sugestões" />
+      </section>
+    )
+  }
 
   return (
     <section aria-labelledby={headingId} className="grid gap-8">

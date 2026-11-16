@@ -39,10 +39,13 @@ export function useRelatedNfts(nftId: string | undefined) {
   const anchor = useQuery({ ...nftQuery(nftId ?? ''), enabled: nftId !== undefined })
   const collection = anchor.data?.collection.id
   const list = useNftList({ ...NFT_SEARCH_DEFAULTS, collection: collection ?? '' }, { enabled: collection !== undefined })
-  const isError = anchor.isError || list.isError
+  // Erro só sem dados: uma revalidação que falha não tira os cards já carregados.
+  const error = list.data ? null : (anchor.error ?? list.error)
   return {
-    items: isError ? [] : list.data?.items.filter((n) => n.id !== nftId),
-    isPending: nftId !== undefined && !isError && list.isPending,
+    items: error ? undefined : list.data?.items.filter((n) => n.id !== nftId),
+    isPending: nftId !== undefined && !error && list.isPending,
+    error,
+    retry: () => void (anchor.isError ? anchor.refetch() : list.refetch()),
   }
 }
 

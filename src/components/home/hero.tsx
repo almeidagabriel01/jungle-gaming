@@ -92,6 +92,21 @@ function SlideArt({ slides, index, sizes, className }: { slides: Nft[]; index: n
   )
 }
 
+/**
+ * Arte do herói quando `/nfts/featured` falha: no mesmo espaço do skeleton (sem deslocamento),
+ * com aviso e nova tentativa. Sem isso o skeleton ficaria para sempre.
+ */
+function HeroArtError({ onRetry, className }: { onRetry: () => void; className: string }) {
+  return (
+    <div role="alert" className={cn('grid place-content-center justify-items-center gap-2 overflow-hidden bg-card p-2 text-center', className)}>
+      <p className="text-xs leading-4 text-muted-foreground md:text-sm">Destaques indisponíveis</p>
+      <Button type="button" variant="outline" onClick={onRetry} className="h-auto min-h-8 px-2 py-1 text-xs whitespace-normal md:min-h-10 md:px-4 md:text-sm">
+        Tentar novamente
+      </Button>
+    </div>
+  )
+}
+
 /** Herói desktop (frame Desktop / Início › Hero: 1200×450, texto 600 + arte 450 r24, gap 110). */
 export function HeroDesktop() {
   const featured = useFeaturedNfts()
@@ -121,8 +136,10 @@ export function HeroDesktop() {
         </div>
         <Dots slides={slides} index={index} onSelect={setIndex} dot="size-2" className="-my-2 -mr-2 justify-self-end" />
       </div>
-      {featured.isPending || featured.isError ? (
+      {featured.isPending ? (
         <Skeleton className="size-[450px] rounded-[24px]" />
+      ) : featured.isError && !featured.data ? (
+        <HeroArtError onRetry={() => void featured.refetch()} className="size-[450px] rounded-[24px]" />
       ) : (
         <SlideArt slides={slides} index={index} sizes="450px" className="size-[450px] animate-fade rounded-[24px] bg-card" />
       )}
@@ -162,8 +179,10 @@ export function HeroMobile() {
         </Link>
       </div>
       <div className="relative mt-1.5 aspect-[138/146] w-full">
-        {featured.isPending || featured.isError ? (
+        {featured.isPending ? (
           <Skeleton className="aspect-square w-full rounded-[16px]" />
+        ) : featured.isError && !featured.data ? (
+          <HeroArtError onRetry={() => void featured.refetch()} className="aspect-square w-full rounded-[16px]" />
         ) : (
           <>
             <SlideArt slides={slides} index={index} sizes="138px" className="aspect-square w-full rounded-[16px] bg-card" />
