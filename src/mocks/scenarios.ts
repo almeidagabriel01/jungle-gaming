@@ -73,4 +73,23 @@ export async function networkDelay(request: Request) {
     ms = catalogRequestCount % 2 === 1 ? 1500 : 100
   }
   await delay(ms)
+  for (const [path, gate] of held) if (pathname.endsWith(path)) await gate.promise
+}
+
+/**
+ * Retenção manual (testes e demonstração): a request cujo caminho termina em `path` fica parada
+ * até `release(path)`. Vale para qualquer método, ao contrário de `slow` (só leituras).
+ */
+const held = new Map<string, { promise: Promise<void>; release: () => void }>()
+
+export function hold(path: string) {
+  if (held.has(path)) return
+  let release!: () => void
+  const promise = new Promise<void>((resolve) => (release = resolve))
+  held.set(path, { promise, release })
+}
+
+export function release(path: string) {
+  held.get(path)?.release()
+  held.delete(path)
 }

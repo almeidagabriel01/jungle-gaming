@@ -9,7 +9,7 @@ import { catalogHandlers } from './handlers/catalog'
 import { contentHandlers } from './handlers/content'
 import { API, apiError } from './handlers/http'
 import { orderHandlers } from './handlers/orders'
-import { activeScenarios, initScenarioFromUrl, setScenario } from './scenarios'
+import { activeScenarios, hold, initScenarioFromUrl, release, setScenario } from './scenarios'
 import { deliver, dropConnections, socketHandler } from './socket'
 
 const handlers: (RequestHandler | WebSocketHandler)[] = [
@@ -37,6 +37,9 @@ const control = {
   },
   scenarios: activeScenarios,
   setScenario,
+  /** Segura as requests cujo caminho termina em `path` (latência controlada) até `release(path)`. */
+  hold,
+  release,
   updateEdition: (nftId: string, editionId: string, patch: { price?: string; available?: number }) =>
     withDb((tx) => {
       updateEdition(tx, nftId, editionId, patch)
