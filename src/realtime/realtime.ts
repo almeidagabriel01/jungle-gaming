@@ -12,22 +12,18 @@ import { ownerKey, sessionStore } from '@/session/store'
 
 /**
  * Cliente de tempo real. Um socket por sessão (token no handshake); trocar de usuário
- * derruba o socket anterior e seus listeners. Eventos são deduplicados por `eventId`,
- * ordenados por `version` e só então aplicados ao cache. Após reconexão, os recursos
- * ativos são reconciliados com a API REST.
- *
- * A deduplicação vale por conexão: cada socket novo (login, troca de usuário, queda, reinício do
- * servidor) recomeça do zero, porque o estado de referência passa a ser o que a API devolve.
- * Guardar ids e versões da conexão anterior descartaria eventos legítimos de um servidor
- * reiniciado (ids e versões voltam a contar do início).
+ * derruba o socket anterior e seus listeners. Um evento só é aplicado se avança a versão do
+ * recurso: essa mesma decisão atualiza o cache e libera os avisos, então evento repetido ou
+ * antigo (com qualquer `eventId` ou `occurredAt`) não muda nada nem é anunciado. As versões
+ * sobrevivem à reconexão da mesma sessão e recomeçam na troca de usuário. Após reconexão, os
+ * recursos ativos são reconciliados com a API REST.
  */
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected'
 
-const SEEN_LIMIT = 500
 /** Nova tentativa de carregar o cliente quando o chunk falha (rede caiu), como o reconnect do socket.io. */
 const LOAD_RETRY_MS = 5_000
-const seen = new Set<string>()
+/** Última versão aplicada por recurso (o `eventId` é redundante: o mesmo evento tem a mesma versão). */
 const versions = new Map<string, number>()
 
 let status: RealtimeStatus = 'disconnected'
@@ -46,11 +42,8 @@ export const realtimeStatus = {
   },
 }
 
-/** true se o evento é novo e mais recente que o último aplicado ao recurso. */
+/** true se o evento avança a versão do recurso; é a única porta para cache e avisos. */
 export function shouldApply(event: RealtimeEvent): boolean {
-  if (seen.has(event.eventId)) return false
-  seen.add(event.eventId)
-  if (seen.size > SEEN_LIMIT) seen.delete(seen.values().next().value!)
   const key = `${event.resource.type}:${event.resource.id}`
   if ((versions.get(key) ?? 0) >= event.version) return false
   versions.set(key, event.version)
@@ -177,8 +170,6 @@ function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
   socket.on('nft.updated', onEvent)
   socket.on('order.updated', onEvent)
   socket.on('connect', () => {
-    seen.clear()
-    versions.clear()
     setStatus('connected')
     if (wasConnected) reconcile(qc)
     wasConnected = true
@@ -227,6 +218,8 @@ export function startRealtime(qc: QueryClient): () => void {
   const unsubscribe = sessionStore.subscribe((next, prev) => {
     // O servidor resolve o usuário no handshake: token novo (login, troca, refresh) exige nova conexão.
     if (next?.tokens.accessToken === prev?.tokens.accessToken) return
+    // Outra sessão: as versões vistas pela anterior não valem para ela.
+    if (next?.user.id !== prev?.user.id) versions.clear()
     close()
     start(true)
   })

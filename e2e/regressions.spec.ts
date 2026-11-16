@@ -91,3 +91,69 @@ test('recibo confirmado só aparece completo, com o ID da transação', async ({
   // Sem espera: no instante em que vira confirmado, o hash já está lá.
   expect(await page.locator('dt:has-text("ID da transação") + dd').textContent()).not.toBe('—')
 })
+
+test('reconexão da mesma sessão não reaplica nem reanuncia evento repetido', async ({ page, mock }) => {
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  await page.goto('/nfts/nft_002')
+  await page.getByRole('radio', { name: '1/50' }).check()
+  await page.getByRole('button', { name: 'Adicionar ao carrinho' }).click()
+  const inCart = (m: MockControl) => m.snapshot().carts.find((c) => c.owner === 'user:usr_ana')?.items.find((i) => i.nftId === 'nft_002')?.editionId ?? null
+  await expect.poll(() => mock.server(inCart)).not.toBeNull()
+  await page.goto('/cart')
+  // Carrinho carregado: o preço base está no cache.
+  await expect(page.getByTestId('quote-total')).toBeVisible()
+  const status = page.getByTestId('realtime-status')
+  await expect(status).toHaveText('Tempo real: conectado')
+  const notices = page.getByTestId('cart-notices')
+  const editionId = (await mock.server(inCart))!
+
+  await mock.server((m, id) => m.updateEdition('nft_002', id, { price: '9.87654321' }), editionId)
+  await expect(notices.getByText(/para 9\.87654321/)).toHaveCount(1)
+  // O servidor confirma um pedido da Ana (o aviso sai fora da página do pedido).
+  await mock.server((m) =>
+    m.emitRaw({
+      eventId: 'evt_order_confirmed',
+      type: 'order.updated',
+      resource: { type: 'order', id: 'ord_seed_ana' },
+      version: 99,
+      occurredAt: new Date().toISOString(),
+      payload: { orderId: 'ord_seed_ana', userId: 'usr_ana', status: 'confirmed', failureReason: null },
+    }),
+  )
+  const confirmed = page.getByText('Pagamento confirmado. Seu pedido foi concluído.')
+  await expect(confirmed).toHaveCount(1)
+
+  // Queda comum: mesma sessão, mesmo servidor.
+  await mock.server((m) => m.dropSockets())
+  await expect(status).not.toHaveText('Tempo real: conectado')
+  await expect(status).toHaveText('Tempo real: conectado')
+
+  // O servidor repete os eventos: idênticos, com `occurredAt` novo e com versão menor e preço diferente.
+  // Um evento novo, depois deles, marca que já foram processados.
+  await mock.server((m) => {
+    const nft = m.recentEvents().findLast((e) => e.type === 'nft.updated' && e.payload.nftId === 'nft_002')!
+    if (nft.type !== 'nft.updated') return
+    const now = new Date().toISOString()
+    const confirmedEvent = {
+      eventId: 'evt_order_confirmed',
+      type: 'order.updated' as const,
+      resource: { type: 'order' as const, id: 'ord_seed_ana' },
+      version: 99,
+      occurredAt: now,
+      payload: { orderId: 'ord_seed_ana', userId: 'usr_ana', status: 'confirmed' as const, failureReason: null },
+    }
+    m.emitRaw(confirmedEvent)
+    m.emitRaw({ ...confirmedEvent, eventId: 'evt_replay_1', version: 98 })
+    m.emitRaw(nft)
+    m.emitRaw({ ...nft, eventId: 'evt_replay_2', occurredAt: now })
+    const editions = nft.payload.editions.map((e) => ({ ...e, price: '3.33' }))
+    m.emitRaw({ ...nft, eventId: 'evt_replay_3', occurredAt: now, version: nft.version - 1, payload: { ...nft.payload, minPrice: '3.33', editions } })
+  })
+  await mock.server((m, id) => m.updateEdition('nft_002', id, { price: '5.5' }), editionId)
+  await expect(notices.getByText(/para 5\.5/)).toHaveCount(1)
+  await expect(notices.getByText(/para 9\.87654321/)).toHaveCount(1)
+  await expect(notices.getByText(/3\.33/)).toHaveCount(0)
+  await expect(page.getByText(/3\.33/)).toHaveCount(0)
+  await expect(confirmed).toHaveCount(1)
+})
