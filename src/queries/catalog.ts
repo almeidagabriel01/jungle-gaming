@@ -59,10 +59,19 @@ export const useFavorites = () => {
 }
 
 /** Favoritar com atualização otimista: aplica na hora, desfaz se a API falhar. */
+const TOGGLE_FAVORITE = ['toggle-favorite'] as const
+
+/**
+ * Várias trocas podem estar em voo ao mesmo tempo (remover cards em sequência). Cada uma desfaz só a
+ * própria mudança na falha, e a resposta do servidor ou o refetch só entram no cache quando ela é a
+ * última em voo: antes disso trariam de volta um card que outra troca já tirou (estado antigo).
+ */
 export function useToggleFavorite() {
   const qc = useQueryClient()
   const user = useUser()
+  const isLast = () => qc.isMutating({ mutationKey: TOGGLE_FAVORITE }) === 1
   const mutation = useMutation({
+    mutationKey: TOGGLE_FAVORITE,
     mutationFn: ({ nft, favorite }: { nft: Nft; favorite: boolean }) => (favorite ? api.favorites.add(nft.id) : api.favorites.remove(nft.id)),
     onMutate: async ({ nft, favorite }) => {
       if (!user) return undefined
@@ -77,18 +86,27 @@ export function useToggleFavorite() {
     },
     onError: (_error, vars, context) => {
       const { nft, favorite } = vars
-      // Sem lista anterior em cache, remove a otimista (setQueryData com undefined não faz nada).
-      if (context?.previous) qc.setQueryData(context.key, context.previous)
-      else if (context) qc.removeQueries({ queryKey: context.key, exact: true })
+      if (context?.previous) {
+        // Desfaz só esta troca, na posição original; as outras em voo continuam aplicadas.
+        const index = context.previous.items.findIndex((n) => n.id === nft.id)
+        qc.setQueryData<Favorites>(context.key, (data) => {
+          const items = (data?.items ?? []).filter((n) => n.id !== nft.id)
+          if (!favorite) items.splice(index < 0 ? items.length : Math.min(index, items.length), 0, nft)
+          return { items }
+        })
+      } else if (context) {
+        // Sem lista anterior em cache, remove a otimista (setQueryData com undefined não faz nada).
+        qc.removeQueries({ queryKey: context.key, exact: true })
+      }
       // O coração volta sozinho no rollback: a nova tentativa fica no próprio aviso.
       announce(`Não foi possível ${favorite ? 'favoritar' : 'remover dos favoritos'} ${nft.name}. Tente novamente.`, { tone: 'error', retry: () => mutation.mutate(vars) })
     },
     onSuccess: (data, { nft, favorite }) => {
-      if (user) qc.setQueryData(keys.favorites(user.id), data)
+      if (user && isLast()) qc.setQueryData(keys.favorites(user.id), data)
       announce(favorite ? `${nft.name} adicionado aos favoritos.` : `${nft.name} removido dos favoritos.`)
     },
     onSettled: () => {
-      if (user) void qc.invalidateQueries({ queryKey: keys.favorites(user.id) })
+      if (user && isLast()) void qc.invalidateQueries({ queryKey: keys.favorites(user.id) })
     },
   })
   return mutation
