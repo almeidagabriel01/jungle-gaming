@@ -41,6 +41,8 @@ boot em `main.tsx`.
 
 Erro padrão: `{ "error": { "code", "message", "fields"?, "details"? } }`. O cliente converte qualquer falha
 em `ApiError { status, code, message, fields }`; rede e timeout viram `status 0` com `NETWORK`/`TIMEOUT`.
+Em rota privada a identidade vem antes do corpo: sessão inválida com corpo inválido responde 401, nunca 422
+(`parseBody` exige o guard da rota).
 
 | Recurso | Endpoint | Respostas |
 | --- | --- | --- |
@@ -93,18 +95,21 @@ Limitações do transporte simulado:
 
 ## Reconciliação REST × Socket.IO
 
-- **Dedupe e ordem:** `eventId` já visto é ignorado; `version` menor ou igual à última aplicada ao recurso
-  também. Duplicatas e eventos antigos não regridem estado nem repetem avisos.
+- **Dedupe e ordem:** um evento só é aplicado se avança a `version` do recurso; a mesma decisão libera cache e
+  avisos, então duplicatas e eventos antigos não regridem estado nem repetem avisos. As versões sobrevivem à
+  reconexão da mesma sessão e recomeçam na troca de usuário e no reset do servidor simulado.
 - **Aplicação:** `nft.updated` atualiza o cache do detalhe, das listas e dos destaques só se a versão do
   evento for maior que a do dado em cache. As listas e os favoritos também são invalidados, porque filtro
   e ordenação por preço/disponibilidade só o servidor recalcula. Se o NFT está no carrinho, avisa o que
   mudou (`aria-live`) e invalida carrinho e cotação, que voltam a vir da API.
 - **Pedidos:** `order.updated` só é aplicado se `payload.userId` é o usuário atual; o pedido é recarregado da
   API para trazer o recibo completo. Enquanto pendente, o pedido também é consultado a cada 5 s (fallback).
-- **Reconexão:** ao reconectar, catálogo, carrinho, cotação e pedidos do usuário são invalidados.
+- **Reconexão:** ao reconectar, catálogo, carrinho, cotação e pedidos do usuário são invalidados. Na primeira
+  conexão, só o que foi buscado antes dela é reconciliado, então um evento emitido nesse intervalo não se perde.
 - **Sessão:** o servidor identifica o usuário no handshake, então cada token novo (login, logout, troca de
   usuário, refresh) recria o socket: listeners do anterior são removidos, eventos que ainda chegarem por ele
-  são descartados e o novo socket reconcilia ao conectar.
+  são descartados e o novo socket reconcilia ao conectar. Cada reconexão envia o token vigente pelo `auth` do
+  handshake, renovado antes de reconectar se tiver vencido.
 
 ## Sessão
 
@@ -131,12 +136,13 @@ Limitações do transporte simulado:
 ## Checkout e idempotência
 
 1. Dados do colecionador, carteira e rede; a conexão da carteira é simulada no servidor (conectar, recusar,
-   desconectar) e exigida na criação do pedido.
+   desconectar), lida da API (sobrevive ao refresh, sai no logout e na troca de conta) e exigida na criação do pedido.
 2. Na revisão, a primeira cotação vista é a aceita. Se a cotação mudar (evento em tempo real ou
    revalidação), a confirmação é bloqueada até o usuário aceitar os novos valores.
 3. Ao confirmar, a cotação é revalidada na hora; o servidor também revalida (`fingerprint`) e responde
    `QUOTE_STALE` com a nova cotação, que exige nova confirmação.
-4. A tentativa (`Idempotency-Key` + corpo) é gravada antes do envio. Clique repetido, timeout, queda ou
+4. A tentativa (`Idempotency-Key` + corpo) é gravada antes do envio, em localStorage por usuário (vale para
+   todas as abas). Clique repetido, timeout, queda ou
    refresh reenviam exatamente a mesma tentativa, e o servidor devolve o mesmo pedido. A tentativa só é
    descartada com resposta definitiva (pedido ou 4xx que não seja 401). Enquanto existir, a confirmação fica
    bloqueada e só "Reenviar pedido" envia: uma nova cotação geraria outra chave e outro pedido.
@@ -185,9 +191,13 @@ publicados após persistir.
   layout; o seed mantém a proporção.
 - **Abas:** "Novos lançamentos" e "Em alta" usam marcações do catálogo (`isNew`, `trending`), não o relógio,
   para manter testes e baselines estáveis.
+- **Cotação do carrinho na rede Ethereum:** o carrinho ainda não tem rede escolhida, então cota com
+  `ethereum`; o checkout recota com a rede selecionada e a taxa pode mudar.
+- **Falhas de rede por cenário:** `server-error` e `read-timeout` atingem só leituras; `write-server-error` (503) e
+  `write-client-error` (403) atingem as escritas do usuário, menos refresh e logout, que mantêm a sessão.
 - **Preços em ETH em todas as redes:** como no layout; Polygon e Solana não usam unidade própria.
-- **Sem runner de teste unitário:** as regras de negócio do mock e de dinheiro são exercitadas pelos E2E
-  através dos handlers MSW, como pede o enunciado.
+- **Testes unitários (Vitest) só para funções puras:** dinheiro, estoque, carrinho do mock e portão de versões
+  do tempo real. Os fluxos são exercitados pelos E2E através dos handlers MSW, como pede o enunciado.
 
 ## Fidelidade ao Figma
 
@@ -210,6 +220,8 @@ mínimos:
 | "Aplicar" do cupom (mobile) | texto `#F5F1EB` no gradiente (≈2,5:1) | texto `#140D0A` | WCAG 1.4.3 |
 | Tempo real | sem indicador | região `role=status` só para leitor de tela | live region pedida no enunciado |
 | Ações fora do escopo (Criadores, newsletter, redes, "Ler mais") | links | botões que avisam "não disponível nesta demonstração" | sem link morto |
+| Recibo: "Ver no Etherscan" | link para o explorador | botão "Explorador (simulado)" que avisa indisponível | o hash é do mock; o explorador real mostraria uma transação inexistente |
+| Rodapé: e-mail e telefone | `contato@email.com` e `+55 11 4002 8922` | texto fictício (`contato@kurio.test`, `+55 11 0000 0000`) sem link | contato de demonstração não aparenta funcionar |
 | Busca no desktop | lupa sem destino definido | abre um diálogo de busca que compõe com os filtros | a busca do catálogo precisa de campo |
 | Filtros no mobile | botão de filtro sem tela | gaveta com filtros e ordenação | o frame mobile não mostra a lateral |
 | Tablet (768–1023) | sem frame | estrutura mobile com cards do desktop | as medidas fixas do desktop só cabem a partir de 1024 |
@@ -242,6 +254,10 @@ Conteúdo divergente entre frames: o seed segue o frame desktop quando os dois d
 mobile do Figma tem outros itens e quantidades (4 itens, 1/1/2/2) que o desktop (3 itens, 2/6/9), e a
 segunda linha da grade mobile do Início repete "Emerald/Sage" com outra arte e selo. Nessas telas o diff
 por pixel separa o que é conteúdo do que é layout.
+
+## Performance
+
+Resultados atuais e relatórios: README, seção Lighthouse. Histórico das otimizações:
 
 Lighthouse no mobile (4G lento + CPU 4x simulados), mediana de 3: início 0,88 → 0,94 e detalhe
 0,92 → 0,96, LCP ~3,2 s → ~2,6 s. A imagem LCP (arte do destaque) depende dos dados da API simulada,
