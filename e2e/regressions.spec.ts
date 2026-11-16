@@ -169,15 +169,22 @@ test('cupom recusado no envio: avisa uma vez, volta aos dados e não reenvia', a
   const confirm = page.getByRole('button', { name: /Confirmar compra/ })
   await expect(confirm).toBeEnabled()
 
-  // O cupom deixa de valer no "servidor" logo depois de cada cotação (antes do POST /orders).
+  // O cupom deixa de valer no "servidor" a cada gravação do mock DB (antes do POST /orders). Sem laço
+  // de timer: só quando o DB é gravado, para não disputar a thread da página.
   await page.evaluate(() => {
-    const dbKey = Object.keys(localStorage).find((k) => k.startsWith('jungle-mock-db:'))!
-    const expire = () => {
-      const db = JSON.parse(localStorage.getItem(dbKey)!) as { quotes: { coupon: { code: string } | null }[] }
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- reaplicado com `call` sobre o próprio Storage
+    const setItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (!key.startsWith('jungle-mock-db:')) {
+        setItem.call(this, key, value)
+        return
+      }
+      const db = JSON.parse(value) as { quotes: { coupon: { code: string } | null }[] }
       for (const q of db.quotes) if (q.coupon) q.coupon.code = 'EXPIRED5'
-      localStorage.setItem(dbKey, JSON.stringify(db))
+      setItem.call(this, key, JSON.stringify(db))
     }
-    setInterval(expire, 10)
+    const dbKey = Object.keys(localStorage).find((k) => k.startsWith('jungle-mock-db:'))!
+    localStorage.setItem(dbKey, localStorage.getItem(dbKey)!)
   })
   const posts: string[] = []
   page.on('request', (r) => {
