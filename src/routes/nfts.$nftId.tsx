@@ -460,7 +460,7 @@ function RelatedRail({ nft }: { nft: Nft }) {
   const related = useRelatedNfts(nft.id)
   return (
     <div className="mt-16 md:mt-24">
-      <NftRail title="Mais desta coleção" items={related.items} loading={related.isPending} />
+      <NftRail title="Mais desta coleção" items={related.items} loading={related.isPending} error={related.error} onRetry={related.retry} />
     </div>
   )
 }

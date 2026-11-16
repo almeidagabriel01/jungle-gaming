@@ -46,8 +46,8 @@ function CartPage() {
   const related = useRelatedNfts(firstNftId)
   const featured = useFeaturedNfts()
   const suggestions = firstNftId
-    ? { items: related.items, loading: related.isPending }
-    : { items: featured.data?.items ?? (featured.isError ? [] : undefined), loading: cart.isPending || featured.isPending }
+    ? { items: related.items, loading: related.isPending, error: related.error, retry: related.retry }
+    : { items: featured.data?.items, loading: cart.isPending || featured.isPending, error: featured.data ? null : featured.error, retry: () => void featured.refetch() }
 
   return (
     <div className="page max-md:px-7">
@@ -134,7 +134,7 @@ function CartPage() {
       )}
 
       <div className="mt-16 md:mt-24">
-        <NftRail title="Colecionadores também viram" items={suggestions.items} loading={suggestions.loading} />
+        <NftRail title="Colecionadores também viram" items={suggestions.items} loading={suggestions.loading} error={suggestions.error} onRetry={suggestions.retry} />
       </div>
     </div>
   )
