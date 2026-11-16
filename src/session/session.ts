@@ -7,6 +7,7 @@ import { keys } from '@/api/keys'
 import type { AuthResponse, LoginBody, RegisterBody } from '@/contracts/account'
 import { announce, clearNotices } from '@/lib/announcer'
 import { queryClient } from '@/lib/query-client'
+import { orderAttempt } from '@/queries/orders'
 import { ownerKey, sessionStore } from './store'
 
 export const PRIVATE_PATHS = ['/checkout', '/orders', '/profile', '/wallets', '/favorites']
@@ -63,6 +64,7 @@ export const useUser = () => useSession()?.user ?? null
 /** Autentica e preserva o carrinho do visitante, mesclando-o ao do usuário. */
 async function signIn(auth: AuthResponse) {
   const guestId = sessionStore.guestId()
+  orderAttempt.clearAllExcept(auth.user.id)
   sessionStore.set(auth)
   try {
     queryClient.setQueryData(keys.cart(ownerKey()), await api.cart.merge(guestId))
@@ -85,6 +87,7 @@ export const useLogout = () =>
       // Encerrar no servidor é melhor esforço: localmente a sessão termina de qualquer forma.
       if (session) await api.auth.logout(session.tokens.refreshToken).catch(() => undefined)
       sessionStore.rotateGuestId()
+      orderAttempt.clearAllExcept()
       sessionStore.clear()
     },
   })

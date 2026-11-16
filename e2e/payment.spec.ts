@@ -65,4 +65,21 @@ test.describe('pagamento', () => {
     await expect(orderView(page)).toHaveAttribute('data-status', 'confirmed')
     expect(await orders(mock.server)).toHaveLength(before + 1)
   })
+  test('pedido sem resposta: outra aba do mesmo usuário retoma a mesma tentativa sem criar um segundo pedido', async ({ page, mock, context }) => {
+    // Na aba 1 o servidor cria o pedido, mas a resposta só sairia após 30 s.
+    await mock.open('/', 'order-timeout')
+    await mock.login(USERS.ana)
+    const before = (await orders(mock.server)).length
+    await (await reviewFromCart(page)).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Enviando seu pedido…' })).toBeVisible()
+    await expect.poll(async () => (await orders(mock.server)).length).toBe(before + 1)
+    const created = (await orders(mock.server)).at(-1)!
+
+    // Aba 2 (cenário padrão): o checkout reenvia a tentativa guardada e cai no pedido já criado.
+    const other = await context.newPage()
+    await other.goto('/checkout')
+    await expect(other).toHaveURL(new RegExp(`/orders/${created.id}`))
+    await expect(orderView(other)).toBeVisible()
+    expect(await orders(mock.server)).toHaveLength(before + 1)
+  })
 })

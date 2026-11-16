@@ -19,19 +19,21 @@ export const useOrder = (orderId: string) => {
 
 /* ---------------------------------------------------------------------------
  * Tentativa de pedido idempotente. A chave e o corpo são gravados ANTES do envio
- * (sessionStorage, por usuário). Reenvio — clique repetido, timeout, refresh — usa
- * exatamente a mesma chave e o mesmo corpo, então o servidor devolve o mesmo pedido.
+ * (localStorage, por usuário: vale para todas as abas, como a sessão). Reenvio — clique
+ * repetido, timeout, refresh, outra aba — usa exatamente a mesma chave e o mesmo corpo,
+ * então o servidor devolve o mesmo pedido.
  * A tentativa só é descartada com resposta definitiva (pedido ou erro 4xx).
  * ------------------------------------------------------------------------- */
 
 export type OrderAttempt = { key: string; body: CreateOrderBody }
 
-const attemptKey = (userId: string) => `jungle-order-attempt:${userId}`
+const ATTEMPT_PREFIX = 'jungle-order-attempt:'
+const attemptKey = (userId: string) => `${ATTEMPT_PREFIX}${userId}`
 
 export const orderAttempt = {
   load(userId: string): OrderAttempt | null {
     try {
-      return JSON.parse(sessionStorage.getItem(attemptKey(userId)) ?? 'null') as OrderAttempt | null
+      return JSON.parse(localStorage.getItem(attemptKey(userId)) ?? 'null') as OrderAttempt | null
     } catch {
       return null
     }
@@ -40,11 +42,20 @@ export const orderAttempt = {
   begin(userId: string, body: CreateOrderBody): OrderAttempt {
     const current = this.load(userId)
     const attempt = current && JSON.stringify(current.body) === JSON.stringify(body) ? current : { key: crypto.randomUUID(), body }
-    sessionStorage.setItem(attemptKey(userId), JSON.stringify(attempt))
+    localStorage.setItem(attemptKey(userId), JSON.stringify(attempt))
     return attempt
   },
   clear(userId: string) {
-    sessionStorage.removeItem(attemptKey(userId))
+    localStorage.removeItem(attemptKey(userId))
+  },
+  /**
+   * Navegador compartilhado: apaga as tentativas de todos menos `keep` (login de outro usuário) ou
+   * todas (logout). Expiração não passa por aqui: o reenvio após novo login precisa da mesma chave.
+   */
+  clearAllExcept(keep?: string) {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(ATTEMPT_PREFIX) && (!keep || key !== attemptKey(keep))) localStorage.removeItem(key)
+    }
   },
 }
 
