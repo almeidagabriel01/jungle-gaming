@@ -37,6 +37,30 @@ test('reset do servidor sem reload: eventos novos voltam a ser aplicados', async
   await expect(price).toContainText('1.23456789')
 })
 
+test('reset do servidor sem reload também zera a sessão e o visitante do navegador', async ({ page, mock }) => {
+  const stored = () => page.evaluate(() => ({ session: localStorage.getItem('jungle-session:v1'), guest: localStorage.getItem('jungle-guest-id') }))
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  await mock.open('/profile')
+  await expect(page.getByRole('form', { name: 'Perfil do colecionador' })).toBeVisible()
+  const before = await stored()
+  expect(before.session).not.toBeNull()
+
+  await mock.server((m) => m.reset())
+  // Sessão que o seed não conhece: a rota privada volta para o login, sem recarregar a página.
+  await expect(page).toHaveURL(/\/login\?redirect=/)
+  const after = await stored()
+  expect(after.session).toBeNull()
+  expect(after.guest).not.toBe(before.guest)
+  expect(await mock.server((m) => m.snapshot().sessions.length)).toBe(0)
+
+  // Coerente depois de um refresh e com o seed: a Ana entra de novo com o carrinho do seed.
+  await page.reload()
+  await expect(page).toHaveURL(/\/login\?redirect=/)
+  await mock.login(USERS.ana)
+  await expect(page.getByRole('link', { name: /^Carrinho, 17 itens$/ }).filter({ visible: true }).first()).toBeVisible()
+})
+
 /** Do carrinho da Ana até o pedido criado (carteira principal, dados do perfil). */
 async function buyCart(page: Page) {
   await page.goto('/cart')
