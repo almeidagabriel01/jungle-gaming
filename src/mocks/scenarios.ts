@@ -93,3 +93,8 @@ export function release(path: string) {
   held.get(path)?.release()
   held.delete(path)
 }
+
+/** Solta todas as retenções (o reset do mock volta a um cenário conhecido, sem request parada). */
+export function releaseAll() {
+  for (const path of [...held.keys()]) release(path)
+}
