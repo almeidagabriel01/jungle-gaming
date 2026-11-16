@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// PW_PORT: porta própria por worktree quando várias suítes rodam na mesma máquina.
+// PW_PORT: porta por rodada; o build nunca reaproveita servidor alheio, então porta ocupada é erro.
 const PORT = Number(process.env.PW_PORT ?? 4173)
 // E2E roda contra o build otimizado (mesmo artefato do deploy de demonstração).
 // PW_DEV=1 usa o servidor de desenvolvimento para depuração local.
@@ -26,5 +26,5 @@ export default defineConfig({
   ],
   webServer: useDev
     ? { command: 'pnpm dev', url: 'http://localhost:5173', reuseExistingServer: true }
-    : { command: `pnpm build && pnpm preview --port ${PORT} --strictPort`, url: `http://localhost:${PORT}`, reuseExistingServer: !process.env.CI, timeout: 180_000 },
+    : { command: `pnpm build && pnpm exec vite preview --port ${PORT} --strictPort`, url: `http://localhost:${PORT}`, reuseExistingServer: false, timeout: 180_000 },
 })
