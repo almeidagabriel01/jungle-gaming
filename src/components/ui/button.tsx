@@ -33,15 +33,38 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * Botão ocupado (mutation em andamento) sem perder o foco do teclado: `disabled` tira o botão da ordem
+ * de foco e o foco cai no body; `aria-disabled` o mantém focável e o clique, inclusive o submit implícito
+ * do Enter num campo, é ignorado até a operação terminar.
+ */
+function busyProps(busy: boolean | undefined, onClick?: React.MouseEventHandler<HTMLButtonElement>) {
+  return {
+    "aria-disabled": busy || undefined,
+    "aria-busy": busy || undefined,
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (busy) {
+        event.preventDefault()
+        return
+      }
+      onClick?.(event)
+    },
+  }
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  pending,
+  onClick,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /** Operação em andamento: bloqueia o clique sem tirar o botão da ordem de foco (ver `busyProps`). */
+    pending?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
 
@@ -52,8 +75,9 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
+      {...(pending === undefined ? { onClick } : busyProps(pending, onClick))}
     />
   )
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants, busyProps }

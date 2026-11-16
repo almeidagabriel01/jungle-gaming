@@ -131,7 +131,7 @@ function ProfileForm({ user }: { user: User }) {
       </fieldset>
 
       <FormError message={errors._} />
-      <Button type="submit" disabled={pending} className="h-10 w-[131px] justify-self-start rounded-[3px] px-0 text-sm leading-4">
+      <Button type="submit" pending={pending} className="h-10 w-[131px] justify-self-start rounded-[3px] px-0 text-sm leading-4">
         {pending ? 'Salvando…' : 'Salvar'}
       </Button>
     </form>

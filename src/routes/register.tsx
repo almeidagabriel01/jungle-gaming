@@ -80,7 +80,7 @@ function RegisterPage() {
           <AuthField label="Confirmar senha" name="confirmPassword" type="password" autoComplete="new-password" required error={errors.confirmPassword} />
           <FormError message={errors._} />
         </div>
-        <Button type="submit" disabled={register.isPending} className="h-[60px] rounded-[10px] text-base leading-4 md:h-[45px] md:rounded-[5px]">
+        <Button type="submit" pending={register.isPending} className="h-[60px] rounded-[10px] text-base leading-4 md:h-[45px] md:rounded-[5px]">
           {register.isPending ? (
             'Criando conta…'
           ) : (

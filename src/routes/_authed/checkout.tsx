@@ -108,7 +108,7 @@ function CheckoutPage() {
       {unresolved && pendingAttempt && (
         <div role="alert" className="mt-4 grid justify-items-start gap-3 rounded-[3px] border border-destructive/60 bg-card p-4 text-sm md:mt-6">
           <p>Não recebemos a confirmação do envio. Reenviar recupera o mesmo pedido, sem cobrança duplicada.</p>
-          <Button variant="outline" className="h-10 rounded-[3px]" onClick={() => send(pendingAttempt)} disabled={submit.isPending}>
+          <Button variant="outline" className="h-10 rounded-[3px]" onClick={() => send(pendingAttempt)} pending={submit.isPending}>
             Reenviar pedido
           </Button>
         </div>
@@ -359,7 +359,7 @@ function DetailsStep({
               type="button"
               variant="outline"
               className="h-10 rounded-[3px]"
-              disabled={disconnect.isPending}
+              pending={disconnect.isPending}
               onClick={() => disconnect.mutate(wallet.id, { onSuccess: () => onConnection({ state: 'idle' }) })}
             >
               Desconectar carteira
@@ -371,7 +371,7 @@ function DetailsStep({
               variant="outline"
               className="h-10 rounded-[3px]"
               aria-describedby={errors.connection ? `${formId}-connection-error` : undefined}
-              disabled={connect.isPending}
+              pending={connect.isPending}
               onClick={() => {
                 onConnection({ state: 'connecting' })
                 connect.mutate(
