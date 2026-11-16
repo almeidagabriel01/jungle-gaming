@@ -21,6 +21,7 @@ import type { Wallet, WalletProvider } from '@/contracts/account'
 import { Quote } from '@/contracts/cart'
 import { Network } from '@/contracts/common'
 import { Buyer, type Order } from '@/contracts/order'
+import { checkoutDraft } from '@/lib/checkout-draft'
 import { apiFieldErrors, focusFirstError, validate, type FieldErrors } from '@/lib/forms'
 import { NETWORK_LABEL, PROVIDER_LABEL } from '@/lib/labels'
 import { formatEth } from '@/lib/money'
@@ -34,21 +35,8 @@ export const Route = createFileRoute('/_authed/checkout')({
   component: CheckoutPage,
 })
 
-/**
- * Rascunho do checkout por usuário: sobrevive a refresh e a expiração de sessão. Guarda só o que o
- * usuário mudou, como texto livre (um campo pela metade não pode invalidar o resto); a validação
- * acontece no envio. Trocar de carteira descarta os campos que vieram da anterior.
- */
-const Draft = z.record(z.string(), z.string()).catch({})
+/** Rascunho do checkout (ver `checkoutDraft`). Trocar de carteira descarta os campos que vieram da anterior. */
 type Draft = Partial<Record<keyof DetailsValues | 'note' | 'walletId', string>>
-const draftKey = (userId: string) => `jungle-checkout-draft:${userId}`
-const loadDraft = (userId: string): Draft => {
-  try {
-    return Draft.parse(JSON.parse(sessionStorage.getItem(draftKey(userId)) ?? '{}'))
-  } catch {
-    return {}
-  }
-}
 
 const isCouponError = (error: unknown): error is ApiError => error instanceof ApiError && (error.code === 'COUPON_EXPIRED' || error.code === 'COUPON_INVALID')
 
@@ -68,14 +56,14 @@ function CheckoutPage() {
   const user = useUser()!
   const { coupon } = Route.useSearch()
   const navigate = useNavigate()
-  const [draft, setDraft] = useState<Draft>(() => loadDraft(user.id))
+  const [draft, setDraft] = useState<Draft>(() => checkoutDraft.load(user.id))
   const [reviewed, setReviewed] = useState<Reviewed | null>(null)
   const [connection, setConnection] = useState<Connection>({ state: 'idle' })
   const submit = useSubmitOrder()
   const recovering = useRef(false)
 
   useEffect(() => {
-    sessionStorage.setItem(draftKey(user.id), JSON.stringify(draft))
+    checkoutDraft.save(user.id, draft)
   }, [draft, user.id])
 
   const qc = useQueryClient()

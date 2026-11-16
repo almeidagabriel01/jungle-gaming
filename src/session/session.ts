@@ -6,6 +6,7 @@ import { api } from '@/api/endpoints'
 import { keys } from '@/api/keys'
 import type { AuthResponse, LoginBody, RegisterBody } from '@/contracts/account'
 import { announce, clearNotices } from '@/lib/announcer'
+import { checkoutDraft } from '@/lib/checkout-draft'
 import { queryClient } from '@/lib/query-client'
 import { orderAttempt } from '@/queries/orders'
 import { ownerKey, sessionStore } from './store'
@@ -65,6 +66,7 @@ export const useUser = () => useSession()?.user ?? null
 async function signIn(auth: AuthResponse) {
   const guestId = sessionStore.guestId()
   orderAttempt.clearAllExcept(auth.user.id)
+  checkoutDraft.clearAllExcept(auth.user.id)
   sessionStore.set(auth)
   try {
     queryClient.setQueryData(keys.cart(ownerKey()), await api.cart.merge(guestId))
@@ -88,6 +90,7 @@ export const useLogout = () =>
       if (session) await api.auth.logout(session.tokens.refreshToken).catch(() => undefined)
       sessionStore.rotateGuestId()
       orderAttempt.clearAllExcept()
+      checkoutDraft.clearAllExcept()
       sessionStore.clear()
     },
   })
