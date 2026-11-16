@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 4173
+// PW_PORT isola execuções paralelas na mesma máquina (o reuseExistingServer pegaria o build de outra).
+const PORT = Number(process.env.PW_PORT) || 4173
 // E2E roda contra o build otimizado (mesmo artefato do deploy de demonstração).
 // PW_DEV=1 usa o servidor de desenvolvimento para depuração local.
 const useDev = process.env.PW_DEV === '1'
@@ -25,5 +26,5 @@ export default defineConfig({
   ],
   webServer: useDev
     ? { command: 'pnpm dev', url: 'http://localhost:5173', reuseExistingServer: true }
-    : { command: 'pnpm build && pnpm preview', url: `http://localhost:${PORT}`, reuseExistingServer: !process.env.CI, timeout: 180_000 },
+    : { command: `pnpm build && pnpm preview --port ${PORT} --strictPort`, url: `http://localhost:${PORT}`, reuseExistingServer: !process.env.CI, timeout: 180_000 },
 })
