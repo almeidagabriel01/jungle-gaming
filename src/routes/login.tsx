@@ -65,7 +65,7 @@ function LoginPage() {
           </Button>
           <FormError message={errors._} />
         </div>
-        <Button type="submit" disabled={login.isPending} className="h-[60px] rounded-[10px] text-base leading-4 md:h-[45px] md:rounded-[5px]">
+        <Button type="submit" pending={login.isPending} className="h-[60px] rounded-[10px] text-base leading-4 md:h-[45px] md:rounded-[5px]">
           {login.isPending ? 'Entrando…' : 'Entrar'}
         </Button>
       </form>

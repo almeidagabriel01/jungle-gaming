@@ -11,12 +11,13 @@ import { NftRail } from '@/components/nft/nft-rail'
 import { QuantityStepper } from '@/components/nft/quantity-stepper'
 import { QueryError } from '@/components/query-error'
 import { QuoteSummary } from '@/components/quote-summary'
-import { Button } from '@/components/ui/button'
+import { Button, busyProps } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { CartItem, Quote } from '@/contracts/cart'
 import { announce, dismissNotice, useNotices } from '@/lib/announcer'
 import { apiFieldErrors, formValues } from '@/lib/forms'
+import { moveFocusAfterRemoval } from '@/lib/focus'
 import { formatEth } from '@/lib/money'
 import { useCart, useQuote, useRemoveCartItem, useUpdateCartItem } from '@/queries/cart'
 import { useFeaturedNfts, useRelatedNfts } from '@/queries/catalog'
@@ -51,7 +52,9 @@ function CartPage() {
 
   return (
     <div className="page max-md:px-7">
-      <h1 className="sr-only">Carrinho de NFTs</h1>
+      <h1 id="cart-title" tabIndex={-1} className="sr-only">
+        Carrinho de NFTs
+      </h1>
       <MobileTopBar title="Carrinho de NFTs" />
       <Breadcrumbs items={[{ label: 'Início', link: { to: '/' } }, { label: 'Mercado', link: { to: '/', hash: 'mercado' } }, { label: 'Carrinho' }]} />
       <CartNotices />
@@ -202,10 +205,19 @@ function CartLine({ item, line }: { item: CartItem; line?: Quote['lines'][number
       </div>
       <button
         type="button"
-        className="grid size-6 cursor-pointer place-items-center text-subtle transition-colors hover:text-accent-text disabled:cursor-not-allowed disabled:opacity-50 max-md:absolute max-md:top-2 max-md:right-4"
+        className="grid size-6 cursor-pointer place-items-center text-subtle transition-colors hover:text-accent-text aria-disabled:cursor-not-allowed aria-disabled:opacity-50 max-md:absolute max-md:top-2 max-md:right-4"
         aria-label={`Remover ${item.name}`}
-        disabled={remove.isPending}
-        onClick={() => remove.mutate(item.id, { onSuccess: () => announce(`${item.name} removido do carrinho.`) })}
+        data-remove-item=""
+        {...busyProps(remove.isPending, (event) => {
+          const button = event.currentTarget
+          remove.mutate(item.id, {
+            onSuccess: () => {
+              // A linha sai do DOM: o foco vai para o "Remover" vizinho ou, com o carrinho vazio, para o título.
+              moveFocusAfterRemoval(button, '[data-remove-item]', document.getElementById('cart-title'))
+              announce(`${item.name} removido do carrinho.`)
+            },
+          })
+        })}
       >
         <DeleteIcon />
       </button>

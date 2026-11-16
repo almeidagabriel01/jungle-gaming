@@ -5,6 +5,7 @@ import { FavoriteButton } from '@/components/nft/favorite-button'
 import { NftCard, NftCardSkeleton } from '@/components/nft/nft-card'
 import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
+import { moveFocusAfterRemoval } from '@/lib/focus'
 import { useFavorites } from '@/queries/catalog'
 
 export const Route = createFileRoute('/_authed/favorites')({
@@ -19,7 +20,7 @@ function FavoritesPage() {
   return (
     <AccountLayout>
       <section aria-labelledby="fav-title" className="grid gap-6 md:pt-6">
-        <h1 id="fav-title" className="text-xl font-bold">
+        <h1 id="fav-title" tabIndex={-1} className="text-xl font-bold outline-none">
           Lista de interesse
         </h1>
         {/* Os cards usam h3: o nível intermediário existe só para leitores de tela. */}
@@ -47,7 +48,15 @@ function FavoritesPage() {
               <li key={nft.id} style={{ '--i': i } as CSSProperties} className="relative min-w-0">
                 <NftCard nft={nft} />
                 {/* O coração do card só aparece no mobile; aqui ele é a ação de remover em todas as larguras. */}
-                <FavoriteButton nft={nft} variant="icon" className="absolute top-3 right-2.5 z-10" />
+                <FavoriteButton
+                  nft={nft}
+                  variant="icon"
+                  className="absolute top-3 right-2.5 z-10"
+                  // A remoção é otimista (o card sai na hora): o foco vai antes para o card vizinho ou o título.
+                  onToggle={(favorite, button) => {
+                    if (!favorite) moveFocusAfterRemoval(button, 'button[aria-pressed]', document.getElementById('fav-title'))
+                  }}
+                />
               </li>
             ))}
           </ul>

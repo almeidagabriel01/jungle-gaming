@@ -37,7 +37,9 @@ function RootLayout() {
       <SiteFooter />
       {showsMobileNav && <MobileNav />}
       <NoticesToToasts />
-      <Toaster position="top-right" />
+      {/* Abaixo do header desktop (69 px) e da barra superior mobile (até 87 px): o toast nunca cobre o carrinho,
+          o menu da conta ou o coração que o usuário acabou de tocar enquanto ainda está na tela. */}
+      <Toaster position="top-right" offset={{ top: 88 }} mobileOffset={{ top: 88 }} />
     </>
   )
 }

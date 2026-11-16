@@ -214,7 +214,7 @@ function WalletForm({
     >
       <WalletDetailsFields variant="wallet" values={values} errors={errors} onChange={(name, value) => setValues((v) => ({ ...v, [name]: value }))} />
       <FormError message={errors._} />
-      <Button type="submit" disabled={save.isPending} className="h-10 w-[131px] justify-self-start rounded-[3px] px-0 text-sm leading-4">
+      <Button type="submit" pending={save.isPending} className="h-10 w-[131px] justify-self-start rounded-[3px] px-0 text-sm leading-4">
         {save.isPending ? 'Salvando…' : 'Salvar carteira'}
       </Button>
     </form>

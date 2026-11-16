@@ -13,7 +13,7 @@ import { NftRail } from '@/components/nft/nft-rail'
 import { Price } from '@/components/nft/price'
 import { QuantityStepper } from '@/components/nft/quantity-stepper'
 import { QueryError } from '@/components/query-error'
-import { Button } from '@/components/ui/button'
+import { Button, busyProps } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Nft } from '@/contracts/nft'
@@ -234,10 +234,10 @@ function NftDetail({ nft }: { nft: Nft }) {
             <div className="mt-3 flex flex-wrap items-start justify-between gap-4 max-md:hidden">
               {stepper('md')}
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="icon" aria-label={addLabel} title="Adicionar ao carrinho" disabled={soldOut || add.isPending} onClick={() => addToCart()}>
+                <Button variant="outline" size="icon" aria-label={addLabel} title="Adicionar ao carrinho" disabled={soldOut} pending={add.isPending} onClick={() => addToCart()}>
                   <ShopIcon className="size-[18px]" />
                 </Button>
-                <Button className="w-[130px]" disabled={add.isPending || (soldOut && inCart === 0)} onClick={buy}>
+                <Button className="w-[130px]" disabled={soldOut && inCart === 0} pending={add.isPending} onClick={buy}>
                   COMPRAR
                 </Button>
                 <FavoriteButton nft={nft} className="w-[130px] [&_svg]:size-5" />
@@ -286,18 +286,18 @@ function NftDetail({ nft }: { nft: Nft }) {
         <div className="flex gap-3">
           <button
             type="button"
-            disabled={add.isPending || (soldOut && inCart === 0)}
-            onClick={buy}
-            className="h-[60px] w-[196px] cursor-pointer rounded-[40px] bg-linear-[135deg] from-primary to-primary/80 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={soldOut && inCart === 0}
+            {...busyProps(add.isPending, buy)}
+            className="h-[60px] w-[196px] cursor-pointer rounded-[40px] bg-linear-[135deg] from-primary to-primary/80 text-base font-bold text-primary-foreground transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
           >
             Comprar NFT
           </button>
           <button
             type="button"
             aria-label={addLabel}
-            disabled={soldOut || add.isPending}
-            onClick={() => addToCart()}
-            className="grid size-[60px] cursor-pointer place-items-center rounded-full border border-border bg-raised text-subtle transition-transform active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-5"
+            disabled={soldOut}
+            {...busyProps(add.isPending, () => addToCart())}
+            className="grid size-[60px] cursor-pointer place-items-center rounded-full border border-border bg-raised text-subtle transition-transform active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 [&_svg]:size-5"
           >
             <ShopIcon />
           </button>
