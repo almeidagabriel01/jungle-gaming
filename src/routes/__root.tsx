@@ -44,15 +44,28 @@ function RootLayout() {
   )
 }
 
-/** Espelha os avisos (mutations e tempo real) em toasts; o Toaster já é uma região aria-live. */
+/**
+ * Espelha os avisos (mutations e tempo real) em toasts; o Toaster já é uma região aria-live.
+ * Aviso com "Tentar novamente" que sai da fila (ex.: troca de usuário) fecha o toast junto.
+ */
 function NoticesToToasts() {
   const notices = useNotices()
   const shown = useRef(new Set<number>())
+  const retryable = useRef(new Set<number>())
   useEffect(() => {
+    // Id próprio: os ids automáticos do sonner também são números sequenciais.
+    const toastId = (id: number) => `notice-${id}`
+    for (const id of retryable.current) {
+      if (notices.some((n) => n.id === id)) continue
+      retryable.current.delete(id)
+      toast.dismiss(toastId(id))
+    }
     for (const notice of notices) {
       if (shown.current.has(notice.id)) continue
       shown.current.add(notice.id)
-      if (notice.tone === 'error') toast.error(notice.message)
+      const action = notice.retry && { label: 'Tentar novamente', onClick: notice.retry }
+      if (action) retryable.current.add(notice.id)
+      if (notice.tone === 'error') toast.error(notice.message, action ? { id: toastId(notice.id), action } : undefined)
       else toast(notice.message)
     }
   }, [notices])
