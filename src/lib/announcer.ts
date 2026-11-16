@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { sessionStore } from '@/session/store'
 
 /**
  * Feedback acessível de mutations e eventos em tempo real: uma fila de avisos lida por
@@ -14,9 +15,16 @@ const emit = () => {
   for (const l of listeners) l()
 }
 
-/** `retry`: falha cuja ação some da tela (ex.: toggle desfeito) ganha "Tentar novamente" no aviso. */
+/**
+ * `retry`: falha cuja ação some da tela (ex.: toggle desfeito) ganha "Tentar novamente" no aviso.
+ * Só vale na sessão em que a falha ocorreu: com outro usuário (ou sem sessão) não executa, e a
+ * troca de usuário limpa os avisos (`clearNotices`), o que também fecha o toast.
+ */
 export function announce(message: string, options: Partial<Pick<Notice, 'tone' | 'topic' | 'retry'>> = {}) {
-  notices = [...notices.slice(-19), { id: ++seq, message, tone: options.tone ?? 'info', topic: options.topic, retry: options.retry }]
+  const { retry } = options
+  const owner = sessionStore.userId()
+  const guarded = retry && (() => sessionStore.userId() === owner && retry())
+  notices = [...notices.slice(-19), { id: ++seq, message, tone: options.tone ?? 'info', topic: options.topic, retry: guarded }]
   emit()
 }
 

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, test, USERS } from './fixtures'
+import { expect, test, USERS, waitForApp } from './fixtures'
 
 /** Rotas protegidas que leem corpo. Corpo `{}` é inválido em todas; o token não existe. */
 const PROTECTED_WRITES = [
@@ -344,4 +344,37 @@ test('checkout: revalidação da cotação que falha não envia o pedido com a c
   await error.getByRole('button', { name: 'Tentar novamente' }).click()
   await confirm.click()
   await expect(page).toHaveURL(/\/orders\/ord_/)
+})
+
+test('"Tentar novamente" do favorito não sobrevive à troca de usuário', async ({ page, mock, context }) => {
+  await page.clock.install()
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  // Outra aba, já pronta para Bruno entrar: a sessão sincroniza entre abas pelo evento `storage`.
+  const other = await context.newPage()
+  await other.goto('/login')
+  await waitForApp(other)
+  await other.getByLabel('E-mail', { exact: true }).fill(USERS.bruno.email)
+  await other.getByLabel('Senha', { exact: true }).fill(USERS.bruno.password)
+
+  await page.goto('/nfts/nft_003')
+  const heart = page.getByRole('button', { name: /^Favoritar / }).filter({ visible: true }).first()
+  await expect(heart).toHaveAttribute('aria-pressed', 'false')
+  const brunoBefore = await mock.server((m) => m.snapshot().favorites.usr_bruno)
+  await switchScenario(mock, 'write-server-error')
+  await heart.click()
+  const retry = toastWith(page, 'Não foi possível favoritar').getByRole('button', { name: 'Tentar novamente' })
+  await expect(retry).toBeVisible()
+  await switchScenario(mock, 'default')
+
+  // Relógio congelado (vale para as duas abas): o toast (4 s) não some sozinho; avança em passos
+  // de 100 ms só até Bruno entrar, bem abaixo disso.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50))
+  await other.getByRole('button', { name: 'Entrar', exact: true }).click()
+  const sessionUser = () => page.evaluate(() => (JSON.parse(localStorage.getItem('jungle-session:v1') ?? 'null') as { user: { id: string } } | null)?.user.id)
+  await stepUntil(page, async () => (await sessionUser()) === 'usr_bruno')
+  await page.clock.runFor(500)
+
+  await expect(retry).toHaveCount(0)
+  expect(await mock.server((m) => m.snapshot().favorites.usr_bruno)).toEqual(brunoBefore)
 })
