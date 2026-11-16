@@ -18,9 +18,21 @@ test('reset do servidor sem reload: eventos novos voltam a ser aplicados', async
   for (const value of ['7.1', '7.2', '7.3']) await mock.server(setPrice, value)
   await expect(price).toContainText('7.3')
 
-  // Servidor reiniciado: ids e versões voltam a contar do seed.
+  // Servidor reiniciado: ids e versões voltam a contar do seed. O observador, armado antes do reset,
+  // só resolve depois da queda e da volta do socket (o "conectado" de antes da queda não conta).
+  const reconnected = page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        let dropped = false
+        new MutationObserver(() => {
+          const connected = document.querySelector('[data-testid="realtime-status"]')?.textContent === 'Tempo real: conectado'
+          if (!connected) dropped = true
+          else if (dropped) resolve()
+        }).observe(document.body, { subtree: true, childList: true, characterData: true })
+      }),
+  )
   await mock.server((m) => m.reset())
-  await expect(page.getByTestId('realtime-status')).toHaveText('Tempo real: conectado')
+  await reconnected
   await mock.server(setPrice, '1.23456789')
   await expect(price).toContainText('1.23456789')
 })
