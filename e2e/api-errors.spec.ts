@@ -218,7 +218,7 @@ for (const [scenario, message] of WRITE_FAILURES) {
       // quando a tentativa já está gravada e o POST /orders está parado na latência.
       await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50))
       await confirm.click()
-      await stepUntil(page, () => page.evaluate(() => sessionStorage.getItem('jungle-order-attempt:usr_ana') !== null))
+      await stepUntil(page, () => page.evaluate(() => localStorage.getItem('jungle-order-attempt:usr_ana') !== null))
       await switchScenario(mock, scenario)
       await page.clock.resume()
 
@@ -337,7 +337,7 @@ test('checkout: revalidação da cotação que falha não envia o pedido com a c
   const error = alertWith(page, 'O servidor recusou a operação')
   await expect(error).toBeVisible()
   // Nenhuma tentativa aberta: o pedido nem chegou a ser enviado.
-  expect(await page.evaluate(() => sessionStorage.getItem('jungle-order-attempt:usr_ana'))).toBeNull()
+  expect(await page.evaluate(() => localStorage.getItem('jungle-order-attempt:usr_ana'))).toBeNull()
   expect(await mock.server((m) => m.snapshot().orders.length)).toBe(orders)
 
   await switchScenario(mock, 'default')
