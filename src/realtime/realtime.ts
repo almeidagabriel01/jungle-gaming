@@ -14,6 +14,11 @@ import { ownerKey, sessionStore } from '@/session/store'
  * derruba o socket anterior e seus listeners. Eventos são deduplicados por `eventId`,
  * ordenados por `version` e só então aplicados ao cache. Após reconexão, os recursos
  * ativos são reconciliados com a API REST.
+ *
+ * A deduplicação vale por conexão: cada socket novo (login, troca de usuário, queda, reinício do
+ * servidor) recomeça do zero, porque o estado de referência passa a ser o que a API devolve.
+ * Guardar ids e versões da conexão anterior descartaria eventos legítimos de um servidor
+ * reiniciado (ids e versões voltam a contar do início).
  */
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected'
@@ -148,6 +153,8 @@ function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
   socket.on('nft.updated', onEvent)
   socket.on('order.updated', onEvent)
   socket.on('connect', () => {
+    seen.clear()
+    versions.clear()
     setStatus('connected')
     if (wasConnected) reconcile(qc)
     wasConnected = true
