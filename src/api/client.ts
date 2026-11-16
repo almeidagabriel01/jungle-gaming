@@ -26,7 +26,36 @@ export class ApiError extends Error {
   }
 }
 
-export const http = axios.create({ baseURL: API_URL, timeout: TIMEOUT_MS })
+export const http = axios.create({ baseURL: API_URL })
+
+/**
+ * Timeout por `setTimeout` + `AbortController` (e não o `xhr.timeout` do Axios): é o mesmo relógio
+ * da página, então `page.clock` controla o timeout nos testes. O sinal do chamador continua valendo.
+ */
+type TimedConfig = InternalAxiosRequestConfig & { _timer?: ReturnType<typeof setTimeout>; _timedOut?: boolean }
+
+http.interceptors.request.use((config: TimedConfig) => {
+  const timeout = new AbortController()
+  config._timedOut = false
+  config._timer = setTimeout(() => {
+    config._timedOut = true
+    timeout.abort()
+  }, TIMEOUT_MS)
+  const caller = config.signal as AbortSignal | undefined
+  config.signal = caller ? AbortSignal.any([caller, timeout.signal]) : timeout.signal
+  return config
+})
+const clearTimer = (config: TimedConfig | undefined) => clearTimeout(config?._timer)
+http.interceptors.response.use(
+  (res) => {
+    clearTimer(res.config)
+    return res
+  },
+  (error: unknown) => {
+    if (error instanceof AxiosError) clearTimer(error.config)
+    throw error
+  },
+)
 
 http.interceptors.request.use((config) => {
   const session = sessionStore.get()
@@ -90,7 +119,11 @@ http.interceptors.response.use(undefined, async (error: unknown) => {
 
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error
-  if (axios.isCancel(error)) return new ApiError(0, 'CANCELED', 'Requisição cancelada')
+  if (axios.isCancel(error)) {
+    return (error.config as TimedConfig | undefined)?._timedOut
+      ? new ApiError(0, 'TIMEOUT', 'O servidor demorou para responder')
+      : new ApiError(0, 'CANCELED', 'Requisição cancelada')
+  }
   if (error instanceof AxiosError) {
     if (error.code === AxiosError.ECONNABORTED || error.code === AxiosError.ETIMEDOUT) {
       return new ApiError(0, 'TIMEOUT', 'O servidor demorou para responder')

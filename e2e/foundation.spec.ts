@@ -2,11 +2,9 @@ import { expect, test, USERS } from './fixtures'
 
 test.describe('pedido idempotente', () => {
   test('timeout após criar o pedido: reenvio recupera o mesmo pedido, sem duplicar', async ({ page, mock }) => {
-    // Tempo do cenário, não `page.clock`: o timeout de 10 s do cliente é o `xhr.timeout` nativo do Axios
-    // (adapter xhr, src/api/client.ts), um timer do navegador fora do relógio falso. Já o atraso de 30 s
-    // da resposta (MSW `delay`) roda no relógio da página: avançá-lo entregaria a resposta antes do
-    // timeout e o cenário deixaria de existir. Por isso o teste espera o timeout real do cliente.
-    test.setTimeout(90_000)
+    // O timeout de 10 s do cliente e o atraso de 30 s da resposta (MSW `delay`) rodam no relógio da
+    // página: avançar 11 s dispara o timeout sem entregar a resposta.
+    await page.clock.install()
     await mock.open('/', 'order-timeout')
     await mock.login(USERS.ana)
     const ordersBefore = await mock.server((m) => m.snapshot().orders.length)
@@ -25,14 +23,17 @@ test.describe('pedido idempotente', () => {
 
     // O servidor criou o pedido, mas a resposta se perde (timeout de 10 s do cliente).
     const resend = page.getByRole('button', { name: 'Reenviar pedido' })
-    await expect(resend).toBeVisible({ timeout: 20_000 })
+    await expect.poll(() => mock.server((m) => m.snapshot().orders.length)).toBe(ordersBefore + 1)
+    await page.clock.fastForward('00:11')
+    await expect(resend).toBeVisible()
     // Sem resposta, uma nova confirmação abriria outra chave: só o reenvio fica disponível.
     await expect(confirm).toBeDisabled()
     expect(await mock.server((m) => m.snapshot().orders.length)).toBe(ordersBefore + 1)
 
     await resend.click()
     await expect(page).toHaveURL(/\/orders\/ord_/)
-    await expect(page.getByTestId('order-view')).toHaveAttribute('data-status', 'confirmed', { timeout: 15_000 })
+    await page.clock.fastForward('00:03')
+    await expect(page.getByTestId('order-view')).toHaveAttribute('data-status', 'confirmed')
     await expect(page.getByTestId('receipt')).toBeVisible()
     expect(await mock.server((m) => m.snapshot().orders.length)).toBe(ordersBefore + 1)
 
