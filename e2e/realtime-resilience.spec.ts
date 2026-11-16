@@ -139,4 +139,32 @@ test.describe('robustez do tempo real', () => {
     await expect(orderView(page)).toHaveAttribute('data-status', 'confirmed')
     expect(await orders(mock.server)).toHaveLength(before + 1)
   })
+  test('primeira conexão: evento emitido entre o primeiro fetch e o connect é reconciliado sem recarregar', async ({ page, mock }) => {
+    await mock.open('/')
+    await mock.login(USERS.ana)
+    // Segura o cliente Socket.IO (chunk do engine.io) na próxima carga: os dados chegam antes da conexão.
+    // Rota no contexto: os assets passam pelo service worker do MSW, que `page.route` não enxerga.
+    let releaseClient!: () => void
+    const clientHeld = new Promise<void>((resolve) => (releaseClient = resolve))
+    await page.context().route('**/*.js', async (route) => {
+      const response = await route.fetch()
+      const body = await response.text()
+      if (body.includes('xhr poll error')) await clientHeld
+      await route.fulfill({ response, body })
+    })
+    await page.goto('/cart')
+    await expect(page.getByTestId('quote-total')).toBeVisible()
+    await expect(status(page)).toHaveText('Tempo real: conectando')
+    const line = await firstCartLine(mock.server, USERS.ana.id)
+    const price = page.getByTestId('cart-price-itm_ana_1')
+    const before = await price.innerText()
+
+    // Nenhum socket conectado: o nft.updated sai para ninguém.
+    await mock.server((m, a) => m.updateEdition(a.nftId, a.editionId, { price: '6' }), line)
+    await expect(price).toHaveText(before)
+
+    releaseClient()
+    await expect(status(page)).toHaveText('Tempo real: conectado')
+    await expect(price).toHaveText('6.00 ETH')
+  })
 })

@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query'
+import type { Query, QueryClient } from '@tanstack/react-query'
 import type { io as Io, Socket } from 'socket.io-client'
 import { refreshSession } from '@/api/client'
 import { keys } from '@/api/keys'
@@ -16,8 +16,8 @@ import { ownerKey, sessionStore } from '@/session/store'
  * derruba o socket anterior e seus listeners. Um evento só é aplicado se avança a versão do
  * recurso: essa mesma decisão atualiza o cache e libera os avisos, então evento repetido ou
  * antigo (com qualquer `eventId` ou `occurredAt`) não muda nada nem é anunciado. As versões
- * sobrevivem à reconexão da mesma sessão e recomeçam na troca de usuário. Após reconexão, os
- * recursos ativos são reconciliados com a API REST.
+ * sobrevivem à reconexão da mesma sessão e recomeçam na troca de usuário. Em toda conexão os
+ * recursos são reconciliados com a API REST (na primeira, só os buscados antes dela).
  */
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected'
@@ -138,12 +138,20 @@ function applyOrderUpdated(qc: QueryClient, event: OrderUpdatedEvent) {
   }
 }
 
-function reconcile(qc: QueryClient) {
+/**
+ * Revalida pela API os recursos que podem ter perdido eventos. Sem `since` (reconexão), tudo, cancelando
+ * o que estiver em voo. Com `since` (primeira conexão), só o que foi buscado antes desse instante, e a
+ * request em voo não é cancelada: a resposta dela vale como a busca (ponytail: se o servidor a montou
+ * antes de um evento perdido, fica velha até o próximo evento; cancelar dobraria a carga de toda abertura).
+ */
+function reconcile(qc: QueryClient, since?: number) {
   const userId = sessionStore.userId()
-  void qc.invalidateQueries({ queryKey: keys.nfts })
-  void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()) })
-  void qc.invalidateQueries({ queryKey: keys.quoteAll })
-  if (userId) void qc.invalidateQueries({ queryKey: keys.orders(userId) })
+  const filters = since === undefined ? {} : { predicate: (q: Query) => q.state.dataUpdatedAt < since }
+  const options = { cancelRefetch: since === undefined }
+  void qc.invalidateQueries({ queryKey: keys.nfts, ...filters }, options)
+  void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()), ...filters }, options)
+  void qc.invalidateQueries({ queryKey: keys.quoteAll, ...filters }, options)
+  if (userId) void qc.invalidateQueries({ queryKey: keys.orders(userId), ...filters }, options)
 }
 
 /** `resumed`: substitui um socket anterior; eventos perdidos na troca são reconciliados na conexão. */
@@ -175,7 +183,8 @@ function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
   socket.on('order.updated', onEvent)
   socket.on('connect', () => {
     setStatus('connected')
-    if (wasConnected) reconcile(qc)
+    // Reconexão: tudo pode ter perdido eventos. Primeira conexão: só o que foi buscado antes dela.
+    reconcile(qc, wasConnected ? undefined : Date.now())
     wasConnected = true
   })
   socket.on('disconnect', () => {
