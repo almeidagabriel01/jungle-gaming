@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   AuthResponse,
+  CurrentWalletConnection,
   SessionResponse,
   User,
   WalletConnection,
@@ -78,6 +79,7 @@ export const api = {
     list: (signal?: AbortSignal) => request(WalletList, { url: '/me/wallets', signal }),
     create: (body: WalletBody) => request(WalletList, { method: 'POST', url: '/me/wallets', data: body }),
     update: (walletId: string, body: WalletBody) => request(WalletList, { method: 'PATCH', url: `/me/wallets/${id(walletId)}`, data: body }),
+    connection: (signal?: AbortSignal) => request(CurrentWalletConnection, { url: '/me/wallet-connection', signal }).then((r) => r.connection),
     connect: (walletId: string, network: Network) =>
       request(WalletConnection, { method: 'POST', url: `/me/wallets/${id(walletId)}/connection`, data: { network } }),
     disconnect: (walletId: string) => send({ method: 'DELETE', url: `/me/wallets/${id(walletId)}/connection` }),

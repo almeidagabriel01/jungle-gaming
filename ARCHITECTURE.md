@@ -60,7 +60,7 @@ em `ApiError { status, code, message, fields }`; rede e timeout viram `status 0`
 | Pedidos | `GET /orders?status` · `GET /orders/:id` | 200 · 403 `FORBIDDEN` (de outro usuário) · 404 |
 | Perfil | `GET`/`PATCH /me/profile` · `PUT /me/avatar` · `POST /me/password` | 200 `User` · 204 · 409 `USERNAME_TAKEN` · 422 `WRONG_PASSWORD` |
 | Carteiras | `GET`/`POST /me/wallets` · `PATCH /me/wallets/:id` | 200/201 `{items}` · 409 `WALLET_LIMIT` · 422 |
-| Conexão | `POST`/`DELETE /me/wallets/:id/connection` | 200 `{walletId, network, connectedAt}` · 204 · 409 `WALLET_REJECTED` |
+| Conexão | `GET /me/wallet-connection` · `POST`/`DELETE /me/wallets/:id/connection` | 200 `{connection}` (ou `null`; o logout encerra) · 200 `{walletId, network, connectedAt}` · 204 · 409 `WALLET_REJECTED` |
 
 Carrinho e cotação pertencem ao usuário autenticado ou ao visitante (`X-Guest-Id`, UUID local). Com token
 presente o servidor nunca cai para o carrinho de visitante, mesmo com sessão vencida.

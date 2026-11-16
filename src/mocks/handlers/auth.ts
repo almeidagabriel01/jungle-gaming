@@ -115,7 +115,11 @@ export const authHandlers = [
       const body = (await request.json().catch(() => ({}))) as { refreshToken?: unknown }
       const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
       withDb((tx) => {
-        tx.db.sessions = tx.db.sessions.filter((s) => s.accessToken !== token && s.refreshToken !== body.refreshToken)
+        const ended = tx.db.sessions.filter((s) => s.accessToken === token || s.refreshToken === body.refreshToken)
+        tx.db.sessions = tx.db.sessions.filter((s) => !ended.includes(s))
+        // A conexão da carteira pertence à sessão do usuário: sair também desconecta.
+        const userIds = new Set(ended.map((s) => s.userId))
+        tx.db.walletConnections = Object.fromEntries(Object.entries(tx.db.walletConnections).filter(([userId]) => !userIds.has(userId)))
       })
       return new HttpResponse(null, { status: 204 })
     }),

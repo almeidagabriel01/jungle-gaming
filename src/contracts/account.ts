@@ -141,6 +141,8 @@ export const WalletConnectBody = z.object({ network: Network })
 
 export const WalletConnection = z.object({ walletId: Id, network: Network, connectedAt: IsoDate })
 export type WalletConnection = z.infer<typeof WalletConnection>
+/** Conexão ativa do usuário (uma por vez), ou `null`: a fonte da verdade fica no servidor e sobrevive ao refresh. */
+export const CurrentWalletConnection = z.object({ connection: WalletConnection.nullable() })
 
 export const SessionResponse = z.object({ user: User })
 

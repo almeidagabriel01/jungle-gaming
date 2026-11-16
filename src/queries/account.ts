@@ -57,7 +57,29 @@ export function useSaveWallet() {
   })
 }
 
-export const useConnectWallet = () =>
-  useMutation({ mutationFn: ({ walletId, network }: { walletId: string; network: Network }) => api.wallets.connect(walletId, network) })
+/**
+ * Conexão da carteira guardada pelo servidor, por usuário (sob `['me', userId]`): sobrevive ao refresh
+ * e sai do cache na troca de conta; o logout a encerra no servidor junto com a sessão.
+ */
+export const useWalletConnection = () => {
+  const userId = useUserId()
+  return useQuery({ queryKey: keys.walletConnection(userId), queryFn: ({ signal }) => api.wallets.connection(signal) })
+}
 
-export const useDisconnectWallet = () => useMutation({ mutationFn: (walletId: string) => api.wallets.disconnect(walletId) })
+export function useConnectWallet() {
+  const qc = useQueryClient()
+  const userId = useUserId()
+  return useMutation({
+    mutationFn: ({ walletId, network }: { walletId: string; network: Network }) => api.wallets.connect(walletId, network),
+    onSuccess: (connection) => qc.setQueryData(keys.walletConnection(userId), connection),
+  })
+}
+
+export function useDisconnectWallet() {
+  const qc = useQueryClient()
+  const userId = useUserId()
+  return useMutation({
+    mutationFn: (walletId: string) => api.wallets.disconnect(walletId),
+    onSuccess: () => qc.setQueryData(keys.walletConnection(userId), null),
+  })
+}

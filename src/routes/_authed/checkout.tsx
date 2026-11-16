@@ -24,7 +24,7 @@ import { Buyer, type Order } from '@/contracts/order'
 import { apiFieldErrors, focusFirstError, validate, type FieldErrors } from '@/lib/forms'
 import { NETWORK_LABEL, PROVIDER_LABEL } from '@/lib/labels'
 import { formatEth } from '@/lib/money'
-import { useConnectWallet, useDisconnectWallet, useWallets } from '@/queries/account'
+import { useConnectWallet, useDisconnectWallet, useWalletConnection, useWallets } from '@/queries/account'
 import { useCartOwner, useQuote } from '@/queries/cart'
 import { orderAttempt, useSubmitOrder, type OrderAttempt } from '@/queries/orders'
 import { useUser } from '@/session/session'
@@ -52,7 +52,8 @@ const loadDraft = (userId: string): Draft => {
 
 const isCouponError = (error: unknown): error is ApiError => error instanceof ApiError && (error.code === 'COUPON_EXPIRED' || error.code === 'COUPON_INVALID')
 
-type Connection = { state: 'idle' | 'connecting' | 'connected' | 'rejected'; walletId?: string; network?: Network; message?: string }
+/** Estado transitório da tentativa de conexão; a conexão ativa vem do servidor (`useWalletConnection`). */
+type Connection = { state: 'idle' | 'connecting' | 'rejected'; message?: string }
 
 /** Dados confirmados no passo de detalhes; a revisão e o pedido usam exatamente estes. */
 type Reviewed = { buyer: Buyer; wallet: Wallet; network: Network }
@@ -199,6 +200,7 @@ function DetailsStep({
   const wallets = useWallets()
   const connect = useConnectWallet()
   const disconnect = useDisconnectWallet()
+  const current = useWalletConnection()
   const [errors, setErrors] = useState<FieldErrors>({})
   const [showCollector, setShowCollector] = useState(false)
   const [otherWalletChecked, setOtherWallet] = useState(false)
@@ -233,8 +235,9 @@ function DetailsStep({
   const withoutCoupon = useQuote({ network, enabled: couponError !== undefined })
   const quote = couponError ? withoutCoupon : withCoupon
 
-  if (wallets.isPending) return <DetailsSkeleton />
+  if (wallets.isPending || current.isPending) return <DetailsSkeleton />
   if (wallets.isError) return <QueryError error={wallets.error} onRetry={() => void wallets.refetch()} />
+  if (current.isError) return <QueryError error={current.error} onRetry={() => void current.refetch()} />
   if (!wallet) {
     return (
       <div className="grid animate-rise justify-items-start gap-4 pt-8">
@@ -247,12 +250,14 @@ function DetailsStep({
     )
   }
 
-  const isConnected = connection.state === 'connected' && connection.walletId === wallet.id && connection.network === network
+  // A conexão vale para esta carteira nesta rede; outra rede ou carteira pede nova conexão.
+  const isConnected = current.data?.walletId === wallet.id && current.data.network === network
 
   const set = (name: string, value: string) => {
     onDraft({ ...draft, [name]: value })
-    // Outra rede ou outro provedor exigem nova conexão.
+    // Outra rede ou outro provedor exigem nova conexão (a rede já não bate; o provedor encerra a atual).
     if (name === 'network' || name === 'provider') onConnection({ state: 'idle' })
+    if (name === 'provider' && isConnected) disconnect.mutate(wallet.id)
   }
   const chooseWallet = (id: string) => {
     if (id === wallet.id) return
@@ -378,7 +383,10 @@ function DetailsStep({
               variant="outline"
               className="h-10 rounded-[3px]"
               pending={disconnect.isPending}
-              onClick={() => disconnect.mutate(wallet.id, { onSuccess: () => onConnection({ state: 'idle' }) })}
+              onClick={() => {
+                onConnection({ state: 'idle' })
+                disconnect.mutate(wallet.id)
+              }}
             >
               Desconectar carteira
             </Button>
@@ -395,7 +403,7 @@ function DetailsStep({
                 connect.mutate(
                   { walletId: wallet.id, network },
                   {
-                    onSuccess: () => onConnection({ state: 'connected', walletId: wallet.id, network }),
+                    onSuccess: () => onConnection({ state: 'idle' }),
                     onError: (error) => onConnection({ state: 'rejected', message: error instanceof ApiError ? error.message : undefined }),
                   },
                 )

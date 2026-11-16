@@ -159,6 +159,16 @@ export const accountHandlers = [
     }),
   ),
 
+  http.get(
+    `${API}/me/wallet-connection`,
+    route(({ request }) =>
+      withDb((tx) => {
+        const auth = authenticate(tx, request)
+        return auth.ok ? HttpResponse.json({ connection: tx.db.walletConnections[auth.value] ?? null }) : auth.response
+      }),
+    ),
+  ),
+
   http.post<{ id: string }>(
     `${API}/me/wallets/:id/connection`,
     route(async ({ request, params }) => {
