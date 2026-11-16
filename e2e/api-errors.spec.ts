@@ -216,7 +216,7 @@ for (const [scenario, message] of WRITE_FAILURES) {
 
       // A confirmação revalida a cotação (sem falha) e só então envia o pedido: o cenário liga
       // quando a tentativa já está gravada e o POST /orders está parado na latência.
-      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50))
+      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 2000))
       await confirm.click()
       await stepUntil(page, () => page.evaluate(() => localStorage.getItem('jungle-order-attempt:usr_ana') !== null))
       await switchScenario(mock, scenario)
@@ -276,7 +276,7 @@ for (const [scenario, message] of WRITE_FAILURES) {
       const save = page.getByRole('button', { name: 'Salvar', exact: true })
 
       // O perfil é salvo antes da senha: o cenário liga só para o POST /me/password.
-      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50))
+      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 2000))
       await save.click()
       await stepUntil(page, () => toastWith(page, 'Perfil atualizado.').isVisible())
       await switchScenario(mock, scenario)
@@ -361,15 +361,15 @@ test('"Tentar novamente" do favorito não sobrevive à troca de usuário', async
   const heart = page.getByRole('button', { name: /^Favoritar / }).filter({ visible: true }).first()
   await expect(heart).toHaveAttribute('aria-pressed', 'false')
   const brunoBefore = await mock.server((m) => m.snapshot().favorites.usr_bruno)
+  // Relógio congelado (vale para as duas abas) antes da falha: o toast (4 s) nasce parado e não
+  // some sozinho; avança em passos de 100 ms só até ele aparecer e Bruno entrar, bem abaixo disso.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 2000))
   await switchScenario(mock, 'write-server-error')
   await heart.click()
   const retry = toastWith(page, 'Não foi possível favoritar').getByRole('button', { name: 'Tentar novamente' })
-  await expect(retry).toBeVisible()
+  await stepUntil(page, () => retry.isVisible())
   await switchScenario(mock, 'default')
 
-  // Relógio congelado (vale para as duas abas): o toast (4 s) não some sozinho; avança em passos
-  // de 100 ms só até Bruno entrar, bem abaixo disso.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 50))
   await other.getByRole('button', { name: 'Entrar', exact: true }).click()
   const sessionUser = () => page.evaluate(() => (JSON.parse(localStorage.getItem('jungle-session:v1') ?? 'null') as { user: { id: string } } | null)?.user.id)
   await stepUntil(page, async () => (await sessionUser()) === 'usr_bruno')
