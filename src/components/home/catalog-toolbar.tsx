@@ -1,3 +1,4 @@
+import { CloseIcon } from '@/components/icons/auth-icons'
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons/shell-icons'
 import { useRef, type KeyboardEvent } from 'react'
 import { cn } from 'cn'
@@ -5,6 +6,27 @@ import { NftSort, NftTab } from '@/contracts/nft'
 import { SORT_LABEL, TAB_LABEL } from '@/lib/labels'
 import { CATALOG_PANEL_ID, tabId } from './catalog-ids'
 
+/**
+ * Busca ativa no desktop. No mobile o campo do catálogo já mostra o termo e o limpa; no desktop a busca é um
+ * diálogo, então a lista diz qual termo a filtra e oferece limpar.
+ */
+export function ActiveSearch({ q, onClear }: { q: string; onClear: () => void }) {
+  return (
+    <div data-testid="active-search" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm leading-4">
+      <p className="text-muted-foreground">
+        Resultados para <span className="font-bold text-foreground">“{q}”</span>
+      </p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-sm font-bold text-accent-text transition-colors hover:text-foreground"
+      >
+        <CloseIcon className="size-4" />
+        Limpar busca
+      </button>
+    </div>
+  )
+}
 
 /** Abas "Todos os NFTs / Novos lançamentos / Em alta" (tablist: setas, Home e End trocam a aba). */
 export function CatalogTabs({ value, onChange, className }: { value: NftTab; onChange: (tab: NftTab) => void; className?: string }) {

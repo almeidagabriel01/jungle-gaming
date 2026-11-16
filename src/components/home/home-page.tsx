@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { CatalogFilters } from '@/components/home/catalog-filters'
 import { CATALOG_PANEL_ID, tabId } from '@/components/home/catalog-ids'
-import { CatalogTabs, Pagination, SortSelect } from '@/components/home/catalog-toolbar'
+import { ActiveSearch, CatalogTabs, Pagination, SortSelect } from '@/components/home/catalog-toolbar'
 import { Journal, PromoBanners } from '@/components/home/editorial'
 import { FeaturedOffer } from '@/components/home/featured-offer'
 import { HeroDesktop, HeroMobile } from '@/components/home/hero'
@@ -102,6 +102,16 @@ export function HomePage({ search }: { search: NftSearch }) {
                 <CatalogTabs value={search.tab} onChange={(tab) => update({ tab })} />
                 <SortSelect value={search.sort} onChange={(sort) => update({ sort })} />
               </div>
+              {search.q && (
+                <ActiveSearch
+                  q={search.q}
+                  onClear={() => {
+                    update({ q: '' })
+                    // O botão some com a busca: o foco segue para a aba ativa, no topo da mesma lista.
+                    document.getElementById(tabId(search.tab))?.focus()
+                  }}
+                />
+              )}
               {results}
             </div>
           </section>
