@@ -1,6 +1,7 @@
 import { http, type RequestHandler, type WebSocketHandler } from 'msw'
 import { setupWorker } from 'msw/browser'
 import type { RealtimeEvent } from '@/contracts/events'
+import { sessionStore } from '@/session/store'
 import { resetDb, scheduleSettlement, settleDueOrders, setEventSink, setOrderScheduler, updateEdition, withDb, type Db } from './db'
 import { accountHandlers } from './handlers/account'
 import { authHandlers } from './handlers/auth'
@@ -27,15 +28,26 @@ const handlers: (RequestHandler | WebSocketHandler)[] = [
 const recent: RealtimeEvent[] = []
 
 /**
+ * O seed não tem sessões nem carrinhos de visitante: depois do reset, o navegador desta aba também
+ * esquece a sessão e o visitante (mesmo caminho do logout), senão ficaria com tokens e um dono de
+ * carrinho que o "servidor" não conhece. A troca de sessão limpa o cache privado e reavalia as rotas.
+ */
+function forgetClient() {
+  sessionStore.rotateGuestId()
+  sessionStore.clear()
+}
+
+/**
  * Controle da simulação para demonstração e testes. Atua só no "servidor": muta o mock DB
  * (REST passa a responder o novo estado) e o evento sai pelo socket mock até o socket.io-client.
  * Nada aqui toca cache, hooks ou componentes.
  */
 const control = {
-  /** Reinicia o "servidor": volta ao seed e derruba os sockets (o cliente reconecta e reconcilia). */
+  /** Reinicia o "servidor": volta ao seed, o navegador esquece sessão e visitante, e os sockets caem (o cliente reconecta e reconcilia). */
   reset: () => {
     releaseAll()
     resetDb()
+    forgetClient()
     dropConnections()
   },
   scenarios: activeScenarios,
@@ -75,6 +87,7 @@ export async function startMocks() {
   initScenarioFromUrl(url)
   if (url.searchParams.has('mockReset')) {
     resetDb()
+    forgetClient()
     // Reset é uma ação única: sem isso, um refresh resetaria o estado de novo.
     url.searchParams.delete('mockReset')
     history.replaceState(history.state, '', url)
