@@ -72,7 +72,8 @@ test.describe('compra completa', () => {
     await expect(rows.nth(1)).toContainText('(x 2)')
     const txHash = (await mock.server((m, id) => m.snapshot().orders.find((o) => o.id === id)!.txHash, order.id))!
     await expect(receipt.getByText(txHash)).toBeAttached()
-    await expect(receipt.getByRole('link', { name: /Ver no explorador/ })).toHaveAttribute('href', new RegExp(txHash))
+    // O hash é do mock: o explorador fica declarado como simulado, sem link para um explorador real (§3).
+    await expect(receipt.getByRole('button', { name: 'Explorador (simulado)' })).toBeVisible()
 
     // Recibo é snapshot: mudança posterior no catálogo (via REST + socket) não altera os valores, nem após refresh.
     await mock.server((m, id) => m.updateEdition('nft_004', id, { price: '7.5' }), edition.id)
