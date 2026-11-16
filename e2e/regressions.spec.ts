@@ -191,3 +191,36 @@ test('cupom recusado no envio: avisa uma vez, volta aos dados e não reenvia', a
   expect(posts).toHaveLength(1)
   expect(await mock.server((m) => m.snapshot().orders.length)).toBe(ordersBefore)
 })
+
+test('reconexão do socket com access vencido renova o token e volta a receber order.updated', async ({ page, mock }) => {
+  await page.clock.install()
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  await page.goto('/cart')
+  await expect(page.getByTestId('quote-total')).toBeVisible()
+  const status = page.getByTestId('realtime-status')
+  await expect(status).toHaveText('Tempo real: conectado')
+  const tokenBefore = await page.evaluate(() => (JSON.parse(localStorage.getItem('jungle-session:v1')!) as { tokens: { accessToken: string } }).tokens.accessToken)
+
+  // O access (15 min) vence sem nenhuma chamada REST; depois o socket cai e reconecta.
+  await page.clock.fastForward('16:00')
+  await mock.server((m) => m.dropSockets())
+  await expect(status).not.toHaveText('Tempo real: conectado')
+  await expect
+    .poll(() => page.evaluate(() => (JSON.parse(localStorage.getItem('jungle-session:v1')!) as { tokens: { accessToken: string } }).tokens.accessToken))
+    .not.toBe(tokenBefore)
+  await expect(status).toHaveText('Tempo real: conectado')
+
+  // `order.updated` só vai para conexões autenticadas como a dona do pedido.
+  await mock.server((m) =>
+    m.emitRaw({
+      eventId: 'evt_after_refresh',
+      type: 'order.updated',
+      resource: { type: 'order', id: 'ord_seed_ana' },
+      version: 99,
+      occurredAt: new Date().toISOString(),
+      payload: { orderId: 'ord_seed_ana', userId: 'usr_ana', status: 'confirmed', failureReason: null },
+    }),
+  )
+  await expect(page.getByText('Pagamento confirmado. Seu pedido foi concluído.')).toBeVisible()
+})

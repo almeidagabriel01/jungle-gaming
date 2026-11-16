@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { io as Io, Socket } from 'socket.io-client'
+import { refreshSession } from '@/api/client'
 import { keys } from '@/api/keys'
 import type { Cart } from '@/contracts/cart'
 import { RealtimeEvent, type NftUpdatedEvent, type OrderUpdatedEvent } from '@/contracts/events'
@@ -147,11 +148,14 @@ function reconcile(qc: QueryClient) {
 
 /** `resumed`: substitui um socket anterior; eventos perdidos na troca são reconciliados na conexão. */
 function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
-  const token = sessionStore.get()?.tokens.accessToken
   const socket = io({
     path: '/socket.io',
     transports: ['websocket'],
-    query: token ? { token } : {},
+    // Lido a cada (re)conexão: o handshake leva sempre o token vigente, nunca o da primeira conexão.
+    auth: (cb) => {
+      const token = sessionStore.get()?.tokens.accessToken
+      cb(token ? { token } : {})
+    },
     reconnectionDelay: 500,
     reconnectionDelayMax: 4_000,
   })
@@ -177,7 +181,12 @@ function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
   socket.on('disconnect', () => {
     setStatus('disconnected')
   })
-  socket.io.on('reconnect_attempt', () => setStatus('connecting'))
+  socket.io.on('reconnect_attempt', () => {
+    setStatus('connecting')
+    // Access vencido: renova pelo mesmo caminho do REST; a sessão nova reabre o socket com o token novo.
+    const tokens = sessionStore.get()?.tokens
+    if (tokens && Date.parse(tokens.expiresAt) <= Date.now()) void refreshSession()
+  })
   setStatus('connecting')
   return socket
 }

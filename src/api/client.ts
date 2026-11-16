@@ -51,7 +51,7 @@ export const setSessionExpiredHandler = (fn: () => void) => {
  * Requests concorrentes que recebem 401 dividem o mesmo refresh, e a expiração é tratada uma única vez
  * (um aviso, uma navegação). Sem sessão (já expirada ou encerrada), não há o que avisar de novo.
  */
-function refreshSession(): Promise<RefreshResult> {
+export function refreshSession(): Promise<RefreshResult> {
   const used = sessionStore.get()?.tokens.refreshToken
   if (!used) return Promise.resolve('expired')
   refreshing ??= axios
