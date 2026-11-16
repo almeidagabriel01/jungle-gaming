@@ -171,7 +171,7 @@ function Receipt({ order }: { order: Order }) {
         </MetaItem>
       </dl>
 
-      <div className="grid gap-3 px-5 pt-5 pb-12 md:px-11">
+      <div className="grid grid-cols-1 gap-3 px-5 pt-5 pb-12 md:px-11">
         <h2 className="text-[15px] leading-4 font-bold">Detalhes da transação</h2>
         <table className="w-full table-fixed">
           <caption className="sr-only">Itens do pedido</caption>

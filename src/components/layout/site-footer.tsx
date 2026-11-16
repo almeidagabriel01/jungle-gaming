@@ -45,7 +45,7 @@ const Soon = ({ children }: { children: string }) => (
 export function SiteFooter() {
   return (
     <footer className="page mt-24 pb-28 md:pb-6">
-      <div className="grid gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-0 xl:pr-4 xl:pb-4">
+      <div className="grid grid-cols-1 gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-0 xl:pr-4 xl:pb-4">
         {FEATURES.map((f) => (
           <section key={f.mark} className="grid content-start gap-3 xl:w-[265px] xl:shrink-0 xl:border-r xl:border-primary xl:px-4">
             <span aria-hidden="true" className="grid size-[74px] place-items-center rounded-full bg-primary text-2xl leading-8 font-bold text-primary-foreground">
@@ -167,7 +167,7 @@ export function WalletsStrip() {
 function Newsletter() {
   const [error, setError] = useState<string | null>(null)
   return (
-    <section aria-labelledby="newsletter-title" className="grid content-start gap-3 xl:w-[357px] xl:px-4">
+    <section aria-labelledby="newsletter-title" className="grid grid-cols-1 content-start gap-3 xl:w-[357px] xl:px-4">
       <h2 id="newsletter-title" className="text-lg leading-4 font-bold">
         Antecipe-se ao próximo lançamento
       </h2>

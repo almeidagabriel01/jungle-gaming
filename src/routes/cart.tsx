@@ -170,7 +170,7 @@ function CartLine({ item, line }: { item: CartItem; line?: Quote['lines'][number
         className="size-[100px] rounded-[14px] object-cover max-md:row-span-2 md:size-[70px] md:rounded-[6px]"
       />
       <div className="grid min-w-0 content-start gap-1.5 pt-[13px] pl-[9px] max-md:col-span-2 max-md:col-start-2 max-md:row-start-1 max-md:pr-12 md:content-center md:pt-0 md:pl-4">
-        <Link to="/nfts/$nftId" params={{ nftId: item.nftId }} className="truncate text-[15px] leading-4 font-bold transition-colors hover:text-accent-text md:text-base">
+        <Link to="/nfts/$nftId" params={{ nftId: item.nftId }} className="break-words text-[15px] leading-4 font-bold transition-colors hover:text-accent-text md:text-base">
           {item.name}
         </Link>
         <p className="text-sm leading-4 text-muted-foreground md:text-subtle">
