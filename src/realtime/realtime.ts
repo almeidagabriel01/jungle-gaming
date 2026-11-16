@@ -10,6 +10,7 @@ import { announce } from '@/lib/announcer'
 import { eth, formatEth } from '@/lib/money'
 import { submitOrderKey } from '@/queries/orders'
 import { ownerKey, sessionStore } from '@/session/store'
+import { createVersionGate, patchNft, patchOrder } from './versions'
 
 /**
  * Cliente de tempo real. Um socket por sessão (token no handshake); trocar de usuário
@@ -24,8 +25,7 @@ export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected'
 
 /** Nova tentativa de carregar o cliente quando o chunk falha (rede caiu), como o reconnect do socket.io. */
 const LOAD_RETRY_MS = 5_000
-/** Última versão aplicada por recurso (o `eventId` é redundante: o mesmo evento tem a mesma versão). */
-const versions = new Map<string, number>()
+const versions = createVersionGate()
 
 let status: RealtimeStatus = 'disconnected'
 const statusListeners = new Set<() => void>()
@@ -41,26 +41,6 @@ export const realtimeStatus = {
       statusListeners.delete(listener)
     }
   },
-}
-
-/** true se o evento avança a versão do recurso; é a única porta para cache e avisos. */
-export function shouldApply(event: RealtimeEvent): boolean {
-  const key = `${event.resource.type}:${event.resource.id}`
-  if ((versions.get(key) ?? 0) >= event.version) return false
-  versions.set(key, event.version)
-  return true
-}
-
-const patchNft = (nft: Nft, event: NftUpdatedEvent): Nft => {
-  if (nft.id !== event.payload.nftId || nft.version >= event.version) return nft
-  const byId = new Map(event.payload.editions.map((e) => [e.id, e]))
-  return {
-    ...nft,
-    version: event.version,
-    minPrice: event.payload.minPrice,
-    available: event.payload.available,
-    editions: nft.editions.map((e) => ({ ...e, ...byId.get(e.id) })),
-  }
 }
 
 /**
@@ -123,9 +103,7 @@ function applyOrderUpdated(qc: QueryClient, event: OrderUpdatedEvent) {
   // O evento só traz o estado; o recibo completo (hash, links) vem da API. `confirmed` só aparece
   // completo: até o refetch o pedido segue pendente, sem recibo pela metade.
   if (next !== 'confirmed') {
-    qc.setQueryData<Order>(keys.order(userId, orderId), (order) =>
-      order && order.version < event.version ? { ...order, status: next, failureReason, version: event.version } : order,
-    )
+    qc.setQueryData<Order>(keys.order(userId, orderId), (order) => order && patchOrder(order, event))
   }
   void qc.invalidateQueries({ queryKey: keys.orders(userId) })
   if (next === 'confirmed') void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()) })
@@ -172,7 +150,7 @@ function connect(io: typeof Io, qc: QueryClient, resumed: boolean): Socket {
 
   const onEvent = (raw: unknown) => {
     const parsed = RealtimeEvent.safeParse(raw)
-    if (!parsed.success || !shouldApply(parsed.data)) return
+    if (!parsed.success || !versions.shouldApply(parsed.data)) return
     // Socket de uma sessão anterior nunca aplica nada na sessão atual.
     if (sessionStore.userId() !== sessionUser) return
     if (parsed.data.type === 'nft.updated') applyNftUpdated(qc, parsed.data)

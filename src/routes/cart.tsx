@@ -19,6 +19,7 @@ import { announce, dismissNotice, useNotices } from '@/lib/announcer'
 import { apiFieldErrors, formValues } from '@/lib/forms'
 import { moveFocusAfterRemoval } from '@/lib/focus'
 import { formatEth } from '@/lib/money'
+import { lineStatus } from '@/lib/stock'
 import { useCart, useQuote, useRemoveCartItem, useUpdateCartItem } from '@/queries/cart'
 import { useFeaturedNfts, useRelatedNfts } from '@/queries/catalog'
 
@@ -160,8 +161,9 @@ function CartLine({ item, line }: { item: CartItem; line?: Quote['lines'][number
   const remove = useRemoveCartItem()
   const error = update.error ?? remove.error
   const errorId = `qty-error-${item.id}`
+  const status = lineStatus(item.quantity, item.available)
   const availability =
-    item.available === 0 ? 'Esgotada' : item.quantity > item.available ? `Só ${item.available} ${item.available === 1 ? 'disponível' : 'disponíveis'}` : null
+    status === 'sold-out' ? 'Esgotada' : status === 'insufficient' ? `Só ${item.available} ${item.available === 1 ? 'disponível' : 'disponíveis'}` : null
 
   return (
     <article className={ROW} aria-label={item.name} aria-describedby={error ? errorId : undefined}>

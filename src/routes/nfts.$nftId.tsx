@@ -21,6 +21,7 @@ import { announce } from '@/lib/announcer'
 import { apiFieldErrors } from '@/lib/forms'
 import { NETWORK_LABEL, RARITY_LABEL } from '@/lib/labels'
 import { eth } from '@/lib/money'
+import { addLimit } from '@/lib/stock'
 import { useAddToCart, useCart, useCartCount } from '@/queries/cart'
 import { useNft, useRelatedNfts } from '@/queries/catalog'
 
@@ -115,10 +116,8 @@ function NftDetail({ nft }: { nft: Nft }) {
   const add = useAddToCart()
   const edition = nft.editions.find((e) => e.id === editionId) ?? nft.editions[0]!
   const inCart = cart.data?.items.find((i) => i.editionId === edition.id)?.quantity ?? 0
-  const maxQuantity = Math.max(0, edition.available - inCart)
   // Derivado no render: um `nft.updated` (ou o próprio carrinho) pode reduzir o limite.
-  const qty = Math.min(quantity, Math.max(1, maxQuantity))
-  const soldOut = maxQuantity === 0
+  const { max: maxQuantity, quantity: qty, soldOut } = addLimit(edition.available, inCart, quantity)
 
   const addToCart = (then?: () => void) => {
     add.mutate(

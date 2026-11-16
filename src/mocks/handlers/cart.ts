@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { AddCartItemBody, MergeCartBody, QuoteRequest, UpdateCartItemBody, type Cart, type Quote, type QuoteLine } from '@/contracts/cart'
 import type { Network } from '@/contracts/common'
 import { eth } from '@/lib/money'
+import { lineStatus } from '@/lib/stock'
 import { NETWORK_FEES, findNft, getCart, guestOwner, hash, iso, nextId, userOwner, withDb, type DbCart, type DbQuote, type Tx } from '../db'
 import { API, apiError, authenticate, parseBody, resolveOwner, route } from './http'
 
@@ -12,6 +13,8 @@ const COUPONS: Record<string, { percentOff: number; expiresAt: string }> = {
   EXPIRED5: { percentOff: 5, expiresAt: '2025-01-01T00:00:00.000Z' },
 }
 
+/** Mescla visitante → conta: soma as quantidades, limitada ao estoque atual, sem nunca reduzir a linha da conta. */
+export const mergedQuantity = (existing: number, guest: number, available: number) => Math.max(existing, Math.min(existing + guest, available))
 
 export function toCart(tx: Tx, cart: DbCart): Cart {
   return {
@@ -72,7 +75,7 @@ export function buildQuote(tx: Tx, owner: string, network: Network, coupon: { co
     unitPrice: item.unitPrice,
     lineTotal: eth.mul(item.unitPrice, item.quantity),
     available: item.available,
-    status: item.available === 0 ? 'sold-out' : item.quantity > item.available ? 'insufficient' : 'ok',
+    status: lineStatus(item.quantity, item.available),
   }))
   const subtotal = eth.add(eth.zero, ...lines.map((l) => l.lineTotal))
   const discount = coupon ? eth.percent(subtotal, coupon.percentOff) : eth.zero
@@ -187,9 +190,8 @@ export const cartHandlers = [
         for (const guestItem of guestCart?.items ?? []) {
           const available = findNft(tx.db, guestItem.nftId)?.editions.find((e) => e.id === guestItem.editionId)?.available ?? 0
           const existing = cart.items.find((i) => i.nftId === guestItem.nftId && i.editionId === guestItem.editionId)
-          // Soma as quantidades, limitada à disponibilidade atual.
-          const quantity = Math.min((existing?.quantity ?? 0) + guestItem.quantity, available)
-          if (existing) existing.quantity = Math.max(existing.quantity, quantity)
+          const quantity = mergedQuantity(existing?.quantity ?? 0, guestItem.quantity, available)
+          if (existing) existing.quantity = quantity
           else if (quantity > 0) cart.items.push({ ...guestItem, id: nextId(tx, 'itm'), quantity })
         }
         tx.db.carts = tx.db.carts.filter((c) => c !== guestCart)
