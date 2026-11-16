@@ -41,12 +41,12 @@ export const orderHandlers = [
   http.post(
     `${API}/orders`,
     route(async ({ request }) => {
+      const body = await parseBody(CreateOrderBody, request, authenticate)
+      if (!body.ok) return body.response
       const key = request.headers.get('idempotency-key')?.trim()
       if (!key || key.length < 8 || key.length > 100) {
         return apiError(422, 'VALIDATION', 'Header Idempotency-Key obrigatório', { fields: { idempotencyKey: 'Obrigatório' } })
       }
-      const body = await parseBody(CreateOrderBody, request)
-      if (!body.ok) return body.response
       const requestHash = hash(JSON.stringify(body.value))
 
       const result = withDb((tx): CreateResult => {
