@@ -28,7 +28,8 @@ test.describe('detalhe do NFT', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'NFT não encontrado' })).toBeVisible()
 
     await page.getByRole('link', { name: 'Voltar ao catálogo' }).click()
-    await expect(page).toHaveURL(/\/#mercado$/)
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.locator('#mercado')).toBeInViewport()
     await expect(page.getByTestId('catalog-summary')).toHaveText('239 resultados')
   })
 
