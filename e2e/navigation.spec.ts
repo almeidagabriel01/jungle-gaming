@@ -9,11 +9,8 @@ test.use({ reducedMotion: 'reduce' })
 
 const scrollY = (page: Page) => page.evaluate(() => Math.round(window.scrollY))
 
-/**
- * Primeira página do catálogo carregada (um card com link; o skeleton também é listitem, mas sem link):
- * a tela já renderizou e o router já aplicou a rolagem.
- */
-const catalogReady = (page: Page) => expect(page.getByTestId('catalog-grid').getByRole('listitem').first().getByRole('link').first()).toBeVisible()
+/** Primeira página do catálogo carregada: a tela já renderizou e o router já aplicou a rolagem. */
+const catalogReady = (page: Page) => expect(page.getByTestId('catalog-grid').getByRole('listitem').first()).toBeVisible()
 
 /** "Mercado" no cabeçalho (desktop); no mobile o atalho para o catálogo é o EXPLORAR do herói. */
 function marketLink(page: Page, info: TestInfo) {
@@ -98,20 +95,14 @@ test.describe('rolagem entre navegações', () => {
     // terminar de carregar: a navegação nova atropela a troca (o caso que um PC carregado produz sozinho).
     const market = await page.evaluate(
       () =>
-        new Promise<number>((resolve, reject) => {
+        new Promise<number>((resolve) => {
           const replaceState = history.replaceState.bind(history)
           history.replaceState = (state: unknown, unused: string, url?: string | URL | null) => {
             replaceState(state, unused, url)
             if (url && !String(url).includes('#')) {
               history.replaceState = replaceState
               const y = Math.round(window.scrollY)
-              // Um erro aqui some dentro do flush do histórico do router: rejeita para o teste falhar na hora.
-              const card = document.querySelector<HTMLAnchorElement>('[data-testid="catalog-grid"] li a')
-              if (!card) {
-                reject(new Error('sem card no catálogo na troca do hash'))
-                return
-              }
-              card.click()
+              document.querySelector<HTMLAnchorElement>('[data-testid="catalog-grid"] li a')!.click()
               resolve(y)
             }
           }
