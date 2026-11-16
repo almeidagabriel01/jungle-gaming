@@ -28,7 +28,6 @@ test.describe('navegação por teclado', () => {
   })
 
   test('login, adicionar ao carrinho, alterar quantidade e remover só com o teclado', async ({ page, mock }) => {
-    test.fixme(true, 'Bug de produção aberto: ao remover um item do carrinho pelo teclado o foco cai no body (linha sai do DOM sem destino de foco).')
     await mock.open('/login')
     await page.getByLabel('E-mail', { exact: true }).focus()
     await page.keyboard.type(USERS.ana.email)
@@ -64,8 +63,48 @@ test.describe('navegação por teclado', () => {
     await removeFirst.focus()
     await page.keyboard.press('Enter')
     await expect(items).toHaveCount(3)
-    // A linha removida sai do DOM: o foco vai para a próxima ação de remover, nunca se perde no body.
+    // A linha removida sai do DOM: o foco vai para o "Remover" da próxima linha, nunca se perde no body.
     await expect(items.first().getByRole('button', { name: /^Remover / })).toBeFocused()
+
+    // Sem próxima linha, vai para a anterior.
+    await items.last().getByRole('button', { name: /^Remover / }).focus()
+    await page.keyboard.press('Enter')
+    await expect(items).toHaveCount(2)
+    await expect(items.last().getByRole('button', { name: /^Remover / })).toBeFocused()
+
+    // Esvaziada a lista, o foco vai para o título do carrinho.
+    for (const count of [1, 0]) {
+      await page.keyboard.press('Enter')
+      await expect(items).toHaveCount(count)
+    }
+    await expect(page.getByRole('heading', { name: 'Carrinho de NFTs', level: 1 })).toBeFocused()
+    await expect(page.getByText('Seu carrinho está vazio.')).toBeVisible()
+  })
+})
+
+test.describe('foco ao remover itens de lista', () => {
+  test('lista de interesse: o foco vai para o card seguinte, depois o anterior e, vazia, para o título', async ({ page, mock }) => {
+    await mock.open('/')
+    await mock.login(USERS.ana)
+    await page.goto('/favorites')
+    const hearts = page.getByTestId('favorites-list').getByRole('button', { name: /dos favoritos$/ })
+    await expect(hearts).toHaveCount(3)
+
+    await hearts.first().focus()
+    await page.keyboard.press('Enter')
+    await expect(hearts).toHaveCount(2)
+    await expect(hearts.first()).toBeFocused()
+
+    await hearts.last().focus()
+    await page.keyboard.press('Enter')
+    await expect(hearts).toHaveCount(1)
+    await expect(hearts.first()).toBeFocused()
+
+    await page.keyboard.press('Enter')
+    await expect(page.getByText('Você ainda não favoritou nenhum NFT.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Lista de interesse', level: 1 })).toBeFocused()
+    // A remoção é otimista: espera o servidor confirmar a última.
+    await expect.poll(() => mock.server((m, id) => m.snapshot().favorites[id], USERS.ana.id)).toEqual([])
   })
 })
 

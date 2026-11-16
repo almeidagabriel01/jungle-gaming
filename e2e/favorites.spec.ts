@@ -19,8 +19,7 @@ test.describe('favoritos com falha da API', () => {
     await page.clock.install()
   })
 
-  test('favoritar e desfavoritar: a mudança otimista volta atrás na falha e a nova tentativa grava', async ({ page, mock }, testInfo) => {
-    test.fixme(testInfo.project.name === 'mobile', 'Pendente: no Pixel 7 o clique com o relógio pausado (clock.pauseAt) não conclui; causa ainda não isolada.')
+  test('favoritar e desfavoritar: a mudança otimista volta atrás na falha e a nova tentativa grava', async ({ page, mock }) => {
     await mock.open('/', 'favorite-fails')
     await mock.login(USERS.ana)
     const name = await mock.server((m, id) => m.snapshot().nfts.find((n) => n.id === id)!.name, NFT_ID)
