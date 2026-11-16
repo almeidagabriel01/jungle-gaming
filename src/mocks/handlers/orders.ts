@@ -13,16 +13,18 @@ const TIMEOUT_RESPONSE_MS = 30_000
 export const toOrder = ({ idempotencyKey: _k, requestHash: _h, settleAt: _s, outcome: _o, ...order }: DbOrder): Order => order
 
 /**
- * Gatilhos de checkout (preço muda / edição esgota) disparam uma vez por chave de idempotência,
- * pela mesma porta de escrita do catálogo: REST e evento `nft.updated` ficam coerentes.
+ * Gatilhos de checkout (preço muda / edição esgota) disparam uma vez por comprador até o reset,
+ * pela mesma porta de escrita do catálogo: REST e evento `nft.updated` ficam coerentes. Por chave
+ * de idempotência não serviria: a recusa (409) encerra a tentativa e a reconfirmação abre outra
+ * chave, então o preço subiria de novo a cada envio e a compra nunca passaria.
  */
-function fireCheckoutTrigger(tx: Tx, owner: string, key: string) {
+function fireCheckoutTrigger(tx: Tx, owner: string) {
   const cart = tx.db.carts.find((c) => c.owner === owner)
   const first = cart?.items[0]
   const edition = first && findNft(tx.db, first.nftId)?.editions.find((e) => e.id === first.editionId)
   if (!first || !edition) return
   const fire = (name: ScenarioName, apply: () => void) => {
-    const id = `${name}:${key}`
+    const id = `${name}:${owner}`
     if (!hasScenario(name) || tx.db.firedTriggers.includes(id)) return
     tx.db.firedTriggers.push(id)
     apply()
@@ -63,7 +65,7 @@ export const orderHandlers = [
             : { response: apiError(409, 'IDEMPOTENCY_CONFLICT', 'Esta tentativa já foi usada com outro conteúdo'), delayResponse: false }
         }
 
-        fireCheckoutTrigger(tx, owner, key)
+        fireCheckoutTrigger(tx, owner)
 
         // Revalida a cotação contra o estado atual: qualquer diferença exige nova confirmação.
         const accepted = tx.db.quotes.find((q) => q.id === body.value.quoteId && q.owner === owner)
