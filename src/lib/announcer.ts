@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react'
  * uma região `aria-live` global. `topic` permite que telas mostrem só o que lhes diz respeito
  * (ex.: o carrinho exibe avisos de mudança de preço dos seus itens).
  */
-export type Notice = { id: number; message: string; tone: 'info' | 'error'; topic?: 'cart' | 'order' }
+export type Notice = { id: number; message: string; tone: 'info' | 'error'; topic?: 'cart' | 'order'; retry?: () => void }
 
 let notices: Notice[] = []
 let seq = 0
@@ -14,8 +14,9 @@ const emit = () => {
   for (const l of listeners) l()
 }
 
-export function announce(message: string, options: { tone?: Notice['tone']; topic?: Notice['topic'] } = {}) {
-  notices = [...notices.slice(-19), { id: ++seq, message, tone: options.tone ?? 'info', topic: options.topic }]
+/** `retry`: falha cuja ação some da tela (ex.: toggle desfeito) ganha "Tentar novamente" no aviso. */
+export function announce(message: string, options: Partial<Pick<Notice, 'tone' | 'topic' | 'retry'>> = {}) {
+  notices = [...notices.slice(-19), { id: ++seq, message, tone: options.tone ?? 'info', topic: options.topic, retry: options.retry }]
   emit()
 }
 

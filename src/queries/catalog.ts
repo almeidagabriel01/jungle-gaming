@@ -59,7 +59,7 @@ export const useFavorites = () => {
 export function useToggleFavorite() {
   const qc = useQueryClient()
   const user = useUser()
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: ({ nft, favorite }: { nft: Nft; favorite: boolean }) => (favorite ? api.favorites.add(nft.id) : api.favorites.remove(nft.id)),
     onMutate: async ({ nft, favorite }) => {
       if (!user) return undefined
@@ -72,11 +72,13 @@ export function useToggleFavorite() {
       })
       return { previous, key }
     },
-    onError: (_error, { nft, favorite }, context) => {
+    onError: (_error, vars, context) => {
+      const { nft, favorite } = vars
       // Sem lista anterior em cache, remove a otimista (setQueryData com undefined não faz nada).
       if (context?.previous) qc.setQueryData(context.key, context.previous)
       else if (context) qc.removeQueries({ queryKey: context.key, exact: true })
-      announce(`Não foi possível ${favorite ? 'favoritar' : 'remover dos favoritos'} ${nft.name}. Tente novamente.`, { tone: 'error' })
+      // O coração volta sozinho no rollback: a nova tentativa fica no próprio aviso.
+      announce(`Não foi possível ${favorite ? 'favoritar' : 'remover dos favoritos'} ${nft.name}. Tente novamente.`, { tone: 'error', retry: () => mutation.mutate(vars) })
     },
     onSuccess: (data, { nft, favorite }) => {
       if (user) qc.setQueryData(keys.favorites(user.id), data)
@@ -86,4 +88,5 @@ export function useToggleFavorite() {
       if (user) void qc.invalidateQueries({ queryKey: keys.favorites(user.id) })
     },
   })
+  return mutation
 }

@@ -50,7 +50,8 @@ function NoticesToToasts() {
     for (const notice of notices) {
       if (shown.current.has(notice.id)) continue
       shown.current.add(notice.id)
-      if (notice.tone === 'error') toast.error(notice.message)
+      const action = notice.retry && { label: 'Tentar novamente', onClick: notice.retry }
+      if (notice.tone === 'error') toast.error(notice.message, action ? { action } : undefined)
       else toast(notice.message)
     }
   }, [notices])
