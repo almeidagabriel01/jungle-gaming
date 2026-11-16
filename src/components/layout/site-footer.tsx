@@ -61,12 +61,13 @@ export function SiteFooter() {
       <div className={`grid gap-3 bg-band p-8 text-sm leading-[22px] xl:h-[88px] xl:items-center xl:py-0 ${columns}`}>
         <p className="text-sm leading-[18px] font-bold tracking-[1.4px]">KURIO</p>
         <p className="whitespace-pre-line xl:whitespace-pre">{'Feito para colecionadores,\ncriadores e cultura'}</p>
-        <a href="mailto:contato@email.com" className="justify-self-start hover:text-accent-text">
-          contato@email.com
-        </a>
-        <a href="tel:+551140028922" className="justify-self-start hover:text-accent-text">
-          +55 11 4002 8922
-        </a>
+        {/* Contato de demonstração: domínio reservado (.test) e número zerado, em texto, sem link que aparente funcionar (§3). */}
+        <p>
+          contato@kurio.test<span className="sr-only"> (e-mail fictício da demonstração)</span>
+        </p>
+        <p>
+          +55 11 0000 0000<span className="sr-only"> (telefone fictício da demonstração)</span>
+        </p>
       </div>
 
       <div className={`grid grid-cols-2 gap-8 bg-card p-8 ${columns}`}>
