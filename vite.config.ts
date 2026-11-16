@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
@@ -34,4 +35,6 @@ export default defineConfig({
   },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
+  // Testes unitários só em src/; os specs do Playwright (e2e/) ficam fora.
+  test: { include: ['src/**/*.test.ts'], environment: 'node' },
 })
