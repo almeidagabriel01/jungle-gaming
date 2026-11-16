@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { Order } from '@/contracts/order'
 import { NETWORK_LABEL, PROVIDER_LABEL } from '@/lib/labels'
 import { eth, formatEth } from '@/lib/money'
+import { unavailable } from '@/lib/unavailable'
 import { useOrder } from '@/queries/orders'
 
 export const Route = createFileRoute('/_authed/orders/$orderId')({
@@ -170,7 +171,7 @@ function Receipt({ order }: { order: Order }) {
         </MetaItem>
       </dl>
 
-      <div className="grid gap-3 px-5 pt-5 pb-12 md:px-11">
+      <div className="grid grid-cols-1 gap-3 px-5 pt-5 pb-12 md:px-11">
         <h2 className="text-[15px] leading-4 font-bold">Detalhes da transação</h2>
         <table className="w-full table-fixed">
           <caption className="sr-only">Itens do pedido</caption>
@@ -237,12 +238,10 @@ function Receipt({ order }: { order: Order }) {
           <p className="text-sm leading-[22px] text-muted-foreground">
             Transação confirmada na {network}. A propriedade foi transferida para sua carteira conectada e registrada na rede.
           </p>
+          {/* O hash é do mock: um link para o explorador real mostraria uma transação inexistente como se existisse (§3). */}
           {order.explorerUrl && (
-            <Button asChild className="h-12 rounded-[5px] px-4 text-base leading-4">
-              <a href={order.explorerUrl} target="_blank" rel="noopener noreferrer">
-                {order.network === 'ethereum' ? 'Ver no Etherscan' : 'Ver no explorador'}
-                <span className="sr-only"> (abre em nova aba)</span>
-              </a>
+            <Button type="button" className="h-12 rounded-[5px] px-4 text-base leading-4" onClick={() => unavailable('O explorador de blocos')}>
+              Explorador (simulado)
             </Button>
           )}
         </div>

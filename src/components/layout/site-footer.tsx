@@ -45,7 +45,7 @@ const Soon = ({ children }: { children: string }) => (
 export function SiteFooter() {
   return (
     <footer className="page mt-24 pb-28 md:pb-6">
-      <div className="grid gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-0 xl:pr-4 xl:pb-4">
+      <div className="grid grid-cols-1 gap-8 bg-card p-8 md:grid-cols-2 xl:flex xl:gap-0 xl:pr-4 xl:pb-4">
         {FEATURES.map((f) => (
           <section key={f.mark} className="grid content-start gap-3 xl:w-[265px] xl:shrink-0 xl:border-r xl:border-primary xl:px-4">
             <span aria-hidden="true" className="grid size-[74px] place-items-center rounded-full bg-primary text-2xl leading-8 font-bold text-primary-foreground">
@@ -61,12 +61,13 @@ export function SiteFooter() {
       <div className={`grid gap-3 bg-band p-8 text-sm leading-[22px] xl:h-[88px] xl:items-center xl:py-0 ${columns}`}>
         <p className="text-sm leading-[18px] font-bold tracking-[1.4px]">KURIO</p>
         <p className="whitespace-pre-line xl:whitespace-pre">{'Feito para colecionadores,\ncriadores e cultura'}</p>
-        <a href="mailto:contato@email.com" className="justify-self-start hover:text-accent-text">
-          contato@email.com
-        </a>
-        <a href="tel:+551140028922" className="justify-self-start hover:text-accent-text">
-          +55 11 4002 8922
-        </a>
+        {/* Contato de demonstração: domínio reservado (.test) e número zerado, em texto, sem link que aparente funcionar (§3). */}
+        <p>
+          contato@kurio.test<span className="sr-only"> (e-mail fictício da demonstração)</span>
+        </p>
+        <p>
+          +55 11 0000 0000<span className="sr-only"> (telefone fictício da demonstração)</span>
+        </p>
       </div>
 
       <div className={`grid grid-cols-2 gap-8 bg-card p-8 ${columns}`}>
@@ -166,7 +167,7 @@ export function WalletsStrip() {
 function Newsletter() {
   const [error, setError] = useState<string | null>(null)
   return (
-    <section aria-labelledby="newsletter-title" className="grid content-start gap-3 xl:w-[357px] xl:px-4">
+    <section aria-labelledby="newsletter-title" className="grid grid-cols-1 content-start gap-3 xl:w-[357px] xl:px-4">
       <h2 id="newsletter-title" className="text-lg leading-4 font-bold">
         Antecipe-se ao próximo lançamento
       </h2>
