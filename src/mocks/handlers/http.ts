@@ -1,4 +1,4 @@
-import { HttpResponse, type HttpResponseResolver, type PathParams } from 'msw'
+import { delay, HttpResponse, type HttpResponseResolver, type PathParams } from 'msw'
 import type { z } from 'zod'
 import type { ErrorCode } from '@/contracts/errors'
 import { guestOwner, userOwner, withDb, type Tx } from '../db'
@@ -65,14 +65,21 @@ export function resolveOwner(tx: Tx, request: Request): Result<string> {
 
 /**
  * Envolve um resolver com as condições de rede do cenário ativo:
- * offline (erro de rede), 503 em leituras e latência determinística.
+ * offline (erro de rede), 503 em leituras, leitura sem resposta, falha nas escritas e latência determinística.
  */
 export function route<P extends PathParams>(resolver: HttpResponseResolver<P>): HttpResponseResolver<P> {
   return async (info) => {
     if (hasScenario('offline')) return HttpResponse.error()
     await networkDelay(info.request)
-    if (info.request.method === 'GET' && hasScenario('server-error')) {
+    const read = info.request.method === 'GET'
+    if (read && hasScenario('server-error')) {
       return apiError(503, 'SERVICE_UNAVAILABLE', 'Serviço temporariamente indisponível')
+    }
+    if (read && hasScenario('read-timeout')) await delay('infinite')
+    // Refresh e logout são manutenção da sessão, não escritas do usuário.
+    if (!read && !/\/auth\/(refresh|logout)$/.test(new URL(info.request.url).pathname)) {
+      if (hasScenario('write-server-error')) return apiError(503, 'SERVICE_UNAVAILABLE', 'Serviço temporariamente indisponível')
+      if (hasScenario('write-client-error')) return apiError(403, 'FORBIDDEN', 'O servidor recusou a operação')
     }
     return resolver(info)
   }
