@@ -157,3 +157,37 @@ test('reconexão da mesma sessão não reaplica nem reanuncia evento repetido', 
   await expect(page.getByText(/3\.33/)).toHaveCount(0)
   await expect(confirmed).toHaveCount(1)
 })
+
+test('cupom recusado no envio: avisa uma vez, volta aos dados e não reenvia', async ({ page, mock }) => {
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  const ordersBefore = await mock.server((m) => m.snapshot().orders.length)
+  await page.goto('/checkout?coupon=JUNGLE10')
+  await page.getByRole('button', { name: 'Conectar carteira' }).click()
+  await expect(page.getByTestId('wallet-connection')).toHaveText(/Carteira conectada/)
+  await page.getByRole('button', { name: 'Revisar pedido' }).click()
+  const confirm = page.getByRole('button', { name: /Confirmar compra/ })
+  await expect(confirm).toBeEnabled()
+
+  // O cupom deixa de valer no "servidor" logo depois de cada cotação (antes do POST /orders).
+  await page.evaluate(() => {
+    const dbKey = Object.keys(localStorage).find((k) => k.startsWith('jungle-mock-db:'))!
+    const expire = () => {
+      const db = JSON.parse(localStorage.getItem(dbKey)!) as { quotes: { coupon: { code: string } | null }[] }
+      for (const q of db.quotes) if (q.coupon) q.coupon.code = 'EXPIRED5'
+      localStorage.setItem(dbKey, JSON.stringify(db))
+    }
+    setInterval(expire, 10)
+  })
+  const posts: string[] = []
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/orders') posts.push(r.url())
+  })
+  await confirm.click()
+
+  await expect(page.getByTestId('coupon-rejected')).toHaveCount(1)
+  await expect(page.getByTestId('coupon-rejected')).toContainText('A compra não foi feita')
+  await expect(page.getByRole('button', { name: 'Revisar pedido' })).toBeVisible()
+  expect(posts).toHaveLength(1)
+  expect(await mock.server((m) => m.snapshot().orders.length)).toBe(ordersBefore)
+})
