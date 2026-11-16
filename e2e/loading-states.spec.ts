@@ -22,7 +22,8 @@ test.describe('estados de carga', () => {
     await openCategory(page, 'Arte digital')
     await expect(loading).toBeVisible()
     await expect(grid).toHaveAttribute('aria-busy', 'true')
-    await mock.server((m) => m.release('/nfts'))
+    // O reset do mock solta toda request retida (nenhum caminho fica travado para o próximo teste).
+    await mock.server((m) => m.reset())
     await expect(loading).toHaveCount(0)
     await expect(grid.getByRole('article').first()).toBeVisible()
 
@@ -38,17 +39,27 @@ test.describe('estados de carga', () => {
     await expect(page.getByTestId('catalog-summary')).toHaveText(/^\d+ resultados?$/)
   })
 
-  test('início: falha dos destaques do herói mostra aviso e nova tentativa, sem skeleton eterno', async ({ page, mock }) => {
+  test('início: herói, destaque e diário mostram aviso e nova tentativa quando a API falha', async ({ page, mock }) => {
     await mock.open('/', 'server-error')
     const hero = page.getByRole('region', { name: /^Seja dono d/ })
-    const error = hero.getByRole('alert')
-    await expect(error).toHaveText(/Destaques indisponíveis/)
+    const offer = page.getByRole('region', { name: 'NFT em destaque' })
+    const journal = page.getByRole('region', { name: 'Diário da Cunhagem' })
+    await expect(hero.getByRole('alert')).toHaveText(/Destaques indisponíveis/)
     await expect(hero.getByRole('img')).toHaveCount(0)
+    await expect(offer.getByRole('alert')).toContainText('Não foi possível carregar o destaque')
+    await expect(journal.getByRole('alert')).toContainText('Não foi possível carregar o diário')
 
     await mock.server((m, name) => m.setScenario(name), 'default')
-    await error.getByRole('button', { name: 'Tentar novamente' }).click()
+    // Herói e destaque usam a mesma consulta: uma nova tentativa recupera os dois.
+    await hero.getByRole('button', { name: 'Tentar novamente' }).click()
     await expect(hero.getByRole('img').first()).toBeVisible()
-    await expect(error).toHaveCount(0)
+    await expect(offer.getByRole('link', { name: /^Ver oferta: / })).toBeVisible()
+    await expect(hero.getByRole('alert')).toHaveCount(0)
+    await expect(offer.getByRole('alert')).toHaveCount(0)
+
+    await journal.getByRole('button', { name: 'Tentar novamente' }).click()
+    await expect(journal.getByRole('article').first()).toBeVisible()
+    await expect(journal.getByRole('alert')).toHaveCount(0)
   })
 
   test('detalhe: skeleton enquanto carrega, falha com mensagem e nova tentativa', async ({ page, mock }) => {
@@ -101,15 +112,21 @@ test.describe('estados de carga', () => {
     await mock.open('/')
     await mock.login(USERS.ana)
     await mock.open('/cart', 'server-error')
-    const error = page.getByRole('alert').filter({ hasText: 'Não foi possível carregar' })
+    const error = page.getByRole('alert').filter({ has: page.getByText('Não foi possível carregar', { exact: true }) })
     await expect(error).toBeVisible()
     await expect(error).toContainText('Serviço temporariamente indisponível')
     await expect(page.getByRole('list', { name: 'Itens do carrinho' })).toHaveCount(0)
+    // O trilho de sugestões também falha com aviso próprio, em vez de sumir.
+    const suggestions = page.getByRole('region', { name: 'Colecionadores também viram' })
+    await expect(suggestions.getByRole('alert')).toContainText('Não foi possível carregar as sugestões')
 
     await mock.server((m, name) => m.setScenario(name), 'default')
     await error.getByRole('button', { name: 'Tentar novamente' }).click()
     await expect(page.getByRole('list', { name: 'Itens do carrinho' }).getByRole('listitem')).toHaveCount(3)
     await expect(page.getByTestId('quote-total').filter({ visible: true }).first()).toHaveText(/ETH/)
+    // Com os itens de volta, as sugestões passam a ser da coleção do primeiro item e carregam.
+    await expect(suggestions.getByRole('article').first()).toBeVisible()
+    await expect(suggestions.getByRole('alert')).toHaveCount(0)
   })
 
   test('perfil: skeleton enquanto carrega, falha com mensagem e nova tentativa', async ({ page, mock }) => {
