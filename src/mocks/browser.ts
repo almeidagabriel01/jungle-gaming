@@ -32,9 +32,11 @@ const recent: RealtimeEvent[] = []
  * Nada aqui toca cache, hooks ou componentes.
  */
 const control = {
+  /** Reinicia o "servidor": volta ao seed e derruba os sockets (o cliente reconecta e reconcilia). */
   reset: () => {
     releaseAll()
     resetDb()
+    dropConnections()
   },
   scenarios: activeScenarios,
   setScenario,

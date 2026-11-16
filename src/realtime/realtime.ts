@@ -7,21 +7,23 @@ import type { Nft, NftList } from '@/contracts/nft'
 import type { Order } from '@/contracts/order'
 import { announce } from '@/lib/announcer'
 import { eth, formatEth } from '@/lib/money'
+import { submitOrderKey } from '@/queries/orders'
 import { ownerKey, sessionStore } from '@/session/store'
 
 /**
  * Cliente de tempo real. Um socket por sessão (token no handshake); trocar de usuário
- * derruba o socket anterior e seus listeners. Eventos são deduplicados por `eventId`,
- * ordenados por `version` e só então aplicados ao cache. Após reconexão, os recursos
- * ativos são reconciliados com a API REST.
+ * derruba o socket anterior e seus listeners. Um evento só é aplicado se avança a versão do
+ * recurso: essa mesma decisão atualiza o cache e libera os avisos, então evento repetido ou
+ * antigo (com qualquer `eventId` ou `occurredAt`) não muda nada nem é anunciado. As versões
+ * sobrevivem à reconexão da mesma sessão e recomeçam na troca de usuário. Após reconexão, os
+ * recursos ativos são reconciliados com a API REST.
  */
 
 export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected'
 
-const SEEN_LIMIT = 500
 /** Nova tentativa de carregar o cliente quando o chunk falha (rede caiu), como o reconnect do socket.io. */
 const LOAD_RETRY_MS = 5_000
-const seen = new Set<string>()
+/** Última versão aplicada por recurso (o `eventId` é redundante: o mesmo evento tem a mesma versão). */
 const versions = new Map<string, number>()
 
 let status: RealtimeStatus = 'disconnected'
@@ -40,11 +42,8 @@ export const realtimeStatus = {
   },
 }
 
-/** true se o evento é novo e mais recente que o último aplicado ao recurso. */
+/** true se o evento avança a versão do recurso; é a única porta para cache e avisos. */
 export function shouldApply(event: RealtimeEvent): boolean {
-  if (seen.has(event.eventId)) return false
-  seen.add(event.eventId)
-  if (seen.size > SEEN_LIMIT) seen.delete(seen.values().next().value!)
   const key = `${event.resource.type}:${event.resource.id}`
   if ((versions.get(key) ?? 0) >= event.version) return false
   versions.set(key, event.version)
@@ -61,6 +60,24 @@ const patchNft = (nft: Nft, event: NftUpdatedEvent): Nft => {
     available: event.payload.available,
     editions: nft.editions.map((e) => ({ ...e, ...byId.get(e.id) })),
   }
+}
+
+/**
+ * Unidades da edição reservadas pela própria sessão (pedidos pendentes no cache). `null` enquanto um
+ * pedido está sendo enviado: a reserva acontece no servidor antes da resposta, então qualquer queda
+ * de estoque nesse intervalo pode ser a do próprio comprador.
+ */
+function reservedByMe(qc: QueryClient, editionId: string): number | null {
+  const userId = sessionStore.userId()
+  if (!userId) return 0
+  if (qc.isMutating({ mutationKey: submitOrderKey(userId) }) > 0) return null
+  const pending = new Map<string, Order>()
+  for (const [, data] of qc.getQueriesData<Order | { items: Order[] }>({ queryKey: keys.orders(userId) })) {
+    for (const order of data && 'items' in data ? data.items : data ? [data] : []) if (order.status === 'pending') pending.set(order.id, order)
+  }
+  let reserved = 0
+  for (const order of pending.values()) for (const line of order.lines) if (line.editionId === editionId) reserved += line.quantity
+  return reserved
 }
 
 function applyNftUpdated(qc: QueryClient, event: NftUpdatedEvent) {
@@ -82,7 +99,9 @@ function applyNftUpdated(qc: QueryClient, event: NftUpdatedEvent) {
     if (!eth.eq(edition.price, item.unitPrice)) {
       announce(`O preço de ${item.name} (${item.editionName}) mudou de ${formatEth(item.unitPrice)} para ${formatEth(edition.price)}.`, { topic: 'cart' })
     }
-    if (edition.available < item.quantity) {
+    // A reserva do próprio pedido não é falta de estoque para quem está comprando.
+    const reserved = reservedByMe(qc, item.editionId)
+    if (reserved !== null && edition.available + reserved < item.quantity) {
       announce(
         edition.available === 0
           ? `${item.name} (${item.editionName}) esgotou.`
@@ -100,10 +119,13 @@ function applyOrderUpdated(qc: QueryClient, event: OrderUpdatedEvent) {
   // Isolamento: evento de pedido de outra conta nunca toca o cache desta sessão.
   if (!userId || event.payload.userId !== userId) return
   const { orderId, status: next, failureReason } = event.payload
-  qc.setQueryData<Order>(keys.order(userId, orderId), (order) =>
-    order && order.version < event.version ? { ...order, status: next, failureReason, version: event.version } : order,
-  )
-  // O evento só traz o estado; o recibo completo (hash, links) vem da API.
+  // O evento só traz o estado; o recibo completo (hash, links) vem da API. `confirmed` só aparece
+  // completo: até o refetch o pedido segue pendente, sem recibo pela metade.
+  if (next !== 'confirmed') {
+    qc.setQueryData<Order>(keys.order(userId, orderId), (order) =>
+      order && order.version < event.version ? { ...order, status: next, failureReason, version: event.version } : order,
+    )
+  }
   void qc.invalidateQueries({ queryKey: keys.orders(userId) })
   if (next === 'confirmed') void qc.invalidateQueries({ queryKey: keys.cart(ownerKey()) })
   // Na tela do próprio pedido a região viva da página já anuncia a mudança (sem aviso duplicado).
@@ -196,6 +218,8 @@ export function startRealtime(qc: QueryClient): () => void {
   const unsubscribe = sessionStore.subscribe((next, prev) => {
     // O servidor resolve o usuário no handshake: token novo (login, troca, refresh) exige nova conexão.
     if (next?.tokens.accessToken === prev?.tokens.accessToken) return
+    // Outra sessão: as versões vistas pela anterior não valem para ela.
+    if (next?.user.id !== prev?.user.id) versions.clear()
     close()
     start(true)
   })

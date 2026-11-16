@@ -93,10 +93,28 @@ function load(): Db {
   return createSeed()
 }
 
+/**
+ * Volta ao conteúdo do seed sem regredir ids nem versões, como um servidor real: o contrato do tempo
+ * real ordena por `version`, e um recurso que "volta no tempo" teria seus eventos novos descartados.
+ */
 export function resetDb() {
+  const previous = localStorage.getItem(STORAGE_KEY) ? load() : null
   // Remove também versões antigas do seed deixadas por deploys anteriores.
   for (const key of Object.keys(localStorage)) if (key.startsWith('jungle-mock-db:')) localStorage.removeItem(key)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(createSeed()))
+  const seed = createSeed()
+  if (previous) {
+    seed.seq = Math.max(seed.seq, previous.seq)
+    // Restaurar o NFT é uma mudança de estado: a versão avança.
+    for (const nft of seed.nfts) {
+      const old = findNft(previous, nft.id)
+      if (old) nft.version = Math.max(nft.version, old.version + 1)
+    }
+    for (const order of seed.orders) {
+      const old = previous.orders.find((o) => o.id === order.id)
+      if (old) order.version = Math.max(order.version, old.version)
+    }
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(seed))
 }
 
 /** Contexto de uma transação: acumula eventos para publicar após o commit. */

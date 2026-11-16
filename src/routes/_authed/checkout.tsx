@@ -50,6 +50,8 @@ const loadDraft = (userId: string): Draft => {
   }
 }
 
+const isCouponError = (error: unknown): error is ApiError => error instanceof ApiError && (error.code === 'COUPON_EXPIRED' || error.code === 'COUPON_INVALID')
+
 type Connection = { state: 'idle' | 'connecting' | 'connected' | 'rejected'; walletId?: string; network?: Network; message?: string }
 
 /** Dados confirmados no passo de detalhes; a revisão e o pedido usam exatamente estes. */
@@ -75,10 +77,20 @@ function CheckoutPage() {
     sessionStorage.setItem(draftKey(user.id), JSON.stringify(draft))
   }, [draft, user.id])
 
-  const goToOrder = (order: Order) => void navigate({ to: '/orders/$orderId', params: { orderId: order.id } })
+  const qc = useQueryClient()
+  const callbacks = {
+    onSuccess: (order: Order) => void navigate({ to: '/orders/$orderId', params: { orderId: order.id } }),
+    onError: (error: unknown) => {
+      // Cupom recusado no envio: a compra não foi feita. Volta aos dados, onde a nova cotação mostra o
+      // erro no campo do cupom com a opção de removê-lo; nada é reenviado sem o usuário confirmar.
+      if (!isCouponError(error)) return
+      setReviewed(null)
+      void qc.invalidateQueries({ queryKey: keys.quoteAll })
+    },
+  }
 
   const send = (attempt: OrderAttempt) => {
-    submit.mutate(attempt, { onSuccess: goToOrder })
+    submit.mutate(attempt, callbacks)
   }
 
   // Retomada: uma tentativa sem resposta (timeout, queda, refresh) é reenviada idêntica.
@@ -86,7 +98,7 @@ function CheckoutPage() {
     const pending = orderAttempt.load(user.id)
     if (!pending || recovering.current) return
     recovering.current = true
-    submit.mutate(pending, { onSuccess: goToOrder })
+    submit.mutate(pending, callbacks)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- executa só na montagem
   }, [])
 
@@ -112,6 +124,12 @@ function CheckoutPage() {
             Reenviar pedido
           </Button>
         </div>
+      )}
+
+      {!reviewed && isCouponError(submit.error) && (
+        <p role="alert" className="mt-4 rounded-[3px] border border-destructive/60 bg-card p-4 text-sm md:mt-6" data-testid="coupon-rejected">
+          A compra não foi feita: {submit.error.message.toLowerCase()}. Confira o cupom e o resumo antes de confirmar de novo.
+        </p>
       )}
 
       {reviewed ? (

@@ -3,7 +3,7 @@ import { CreateOrderBody, type Order } from '@/contracts/order'
 import { eth } from '@/lib/money'
 import { findNft, hash, iso, nextId, scheduleSettlement, updateEdition, userOwner, withDb, type DbOrder, type Tx } from '../db'
 import { hasScenario, type ScenarioName } from '../scenarios'
-import { buildQuote, toQuote } from './cart'
+import { buildQuote, checkCoupon, toQuote } from './cart'
 import { API, apiError, authenticate, parseBody, route } from './http'
 
 const SETTLE_MS = 2_000
@@ -69,7 +69,10 @@ export const orderHandlers = [
 
         // Revalida a cotação contra o estado atual: qualquer diferença exige nova confirmação.
         const accepted = tx.db.quotes.find((q) => q.id === body.value.quoteId && q.owner === owner)
-        const current = buildQuote(tx, owner, body.value.network, accepted?.coupon ?? null)
+        // O cupom aceito também é revalidado (pode ter expirado desde a cotação).
+        const coupon = checkCoupon(accepted?.coupon?.code, tx.now)
+        if (!coupon.ok) return { response: coupon.response, delayResponse: false }
+        const current = buildQuote(tx, owner, body.value.network, coupon.coupon)
         if (!accepted || current.fingerprint !== body.value.fingerprint) {
           return {
             response: apiError(409, 'QUOTE_STALE', 'Preço, disponibilidade ou taxas mudaram. Revise o pedido.', { details: { quote: toQuote(current) } }),
