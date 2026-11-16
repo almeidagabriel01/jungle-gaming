@@ -14,6 +14,9 @@ const router = createRouter({
   // O cache é do TanStack Query; o router não guarda dados de loader por conta própria.
   defaultPreloadStaleTime: 0,
   scrollRestoration: true,
+  // A entrada que perdeu o hash (abaixo) guarda a chave da que ela substituiu: as duas são a mesma tela para a
+  // restauração, mesmo que outra navegação atropele a troca antes de ela terminar.
+  getScrollRestorationKey: (location) => location.state.scrollKey ?? location.state.__TSR_key ?? location.href,
 })
 
 /*
@@ -23,6 +26,7 @@ const router = createRouter({
  * - O hash (#mercado, #diario) é um pedido de rolagem, não estado da tela: depois que o router rola até a âncora,
  *   a entrada vira a mesma URL sem o hash, sem mexer na rolagem. Recarregar ou compartilhar o link não pula de novo
  *   para a seção e o `redirect` do login não carrega a âncora. Voltar e avançar restauram a posição.
+ *   O `replace` cria uma chave nova; o `scrollKey` mantém a da entrada original (ver getScrollRestorationKey).
  */
 let sameLocationLink = false
 router.subscribe('onBeforeNavigate', ({ fromLocation, toLocation, hrefChanged }) => {
@@ -35,12 +39,18 @@ router.subscribe('onRendered', ({ toLocation }) => {
     sameLocationLink = false
     window.scrollTo(0, 0)
   }
-  if (toLocation.hash) void router.navigate({ href: toLocation.pathname + toLocation.searchStr, replace: true, resetScroll: false })
+  if (!toLocation.hash) return
+  const scrollKey = toLocation.state.scrollKey ?? toLocation.state.__TSR_key
+  void router.navigate({ href: toLocation.pathname + toLocation.searchStr, replace: true, resetScroll: false, state: { scrollKey } })
 })
 
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
+  }
+  interface HistoryState {
+    /** Chave de restauração herdada da entrada substituída (troca do hash). */
+    scrollKey?: string
   }
 }
 
