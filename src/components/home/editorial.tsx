@@ -1,6 +1,7 @@
 import { Link, type LinkProps } from '@tanstack/react-router'
 import { ArrowRightIcon } from '@/components/icons/shell-icons'
 import type { CSSProperties } from 'react'
+import { QueryError } from '@/components/query-error'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { unavailable } from '@/lib/unavailable'
@@ -62,7 +63,6 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 
 /** "Diário da Cunhagem": artigos vêm da API; leitura completa está fora do escopo (§3). */
 export function Journal() {
   const journal = useJournal()
-  if (journal.isError) return null
   return (
     <section id="diario" aria-labelledby="journal-title" className="grid scroll-mt-8 gap-10">
       <header className="grid gap-3 text-center">
@@ -71,53 +71,57 @@ export function Journal() {
         </h2>
         <p className="text-sm leading-[18px] text-muted-foreground">Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.</p>
       </header>
-      <ul className="stagger grid gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,268px)]">
-        {journal.isPending
-          ? Array.from({ length: 4 }, (_, i) => (
-              <li key={i} className="overflow-hidden rounded-[8px] bg-card">
-                <Skeleton className="aspect-[268/195] w-full rounded-none" />
-                <div className="grid gap-2 px-4 pt-3 pb-4">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              </li>
-            ))
-          : journal.data.items.map((article, i) => (
-              <li key={article.id} style={{ '--i': i } as CSSProperties}>
-                <article className="group grid h-full content-start overflow-hidden rounded-[8px] bg-card">
-                  <div className="overflow-hidden">
-                    <img
-                      src={article.image.thumbnailUrl}
-                      alt={article.image.alt}
-                      width={480}
-                      height={349}
-                      loading="lazy"
-                      className="aspect-[268/195] w-full object-cover transition-transform duration-700 ease-[var(--ease-out-quint)] group-hover:scale-105"
-                    />
+      {journal.isError && !journal.data ? (
+        <QueryError error={journal.error} onRetry={() => void journal.refetch()} title="Não foi possível carregar o diário" />
+      ) : (
+        <ul className="stagger grid gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,268px)]">
+          {!journal.data
+            ? Array.from({ length: 4 }, (_, i) => (
+                <li key={i} className="overflow-hidden rounded-[8px] bg-card">
+                  <Skeleton className="aspect-[268/195] w-full rounded-none" />
+                  <div className="grid gap-2 px-4 pt-3 pb-4">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-8 w-full" />
                   </div>
-                  <div className="grid content-start gap-2 px-4 pt-3 pb-4">
-                    <p className="text-xs leading-4 font-medium text-muted-foreground">
-                      <time dateTime={article.publishedAt}>{dateFormatter.format(new Date(article.publishedAt))}</time>
-                      <span aria-hidden="true" className="whitespace-pre">{'  |  '}</span>
-                      <span className="sr-only">, </span>
-                      Leitura de {article.readingMinutes} min
-                    </p>
-                    <h3 className="text-base leading-[21px] font-bold">{article.title}</h3>
-                    <p className="text-xs leading-4 font-medium text-muted-foreground">{article.excerpt}</p>
-                    <button
-                      type="button"
-                      onClick={() => unavailable('A leitura completa dos artigos')}
-                      className="inline-flex w-fit cursor-pointer items-center gap-1 text-xs leading-[14px] font-bold text-accent-text hover:underline"
-                    >
-                      Ler mais <span className="sr-only">sobre {article.title}</span>
-                      <span aria-hidden="true" className="leading-4 font-normal">→</span>
-                    </button>
-                  </div>
-                </article>
-              </li>
-            ))}
-      </ul>
+                </li>
+              ))
+            : journal.data.items.map((article, i) => (
+                <li key={article.id} style={{ '--i': i } as CSSProperties}>
+                  <article className="group grid h-full content-start overflow-hidden rounded-[8px] bg-card">
+                    <div className="overflow-hidden">
+                      <img
+                        src={article.image.thumbnailUrl}
+                        alt={article.image.alt}
+                        width={480}
+                        height={349}
+                        loading="lazy"
+                        className="aspect-[268/195] w-full object-cover transition-transform duration-700 ease-[var(--ease-out-quint)] group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="grid content-start gap-2 px-4 pt-3 pb-4">
+                      <p className="text-xs leading-4 font-medium text-muted-foreground">
+                        <time dateTime={article.publishedAt}>{dateFormatter.format(new Date(article.publishedAt))}</time>
+                        <span aria-hidden="true" className="whitespace-pre">{'  |  '}</span>
+                        <span className="sr-only">, </span>
+                        Leitura de {article.readingMinutes} min
+                      </p>
+                      <h3 className="text-base leading-[21px] font-bold">{article.title}</h3>
+                      <p className="text-xs leading-4 font-medium text-muted-foreground">{article.excerpt}</p>
+                      <button
+                        type="button"
+                        onClick={() => unavailable('A leitura completa dos artigos')}
+                        className="inline-flex w-fit cursor-pointer items-center gap-1 text-xs leading-[14px] font-bold text-accent-text hover:underline"
+                      >
+                        Ler mais <span className="sr-only">sobre {article.title}</span>
+                        <span aria-hidden="true" className="leading-4 font-normal">→</span>
+                      </button>
+                    </div>
+                  </article>
+                </li>
+              ))}
+        </ul>
+      )}
     </section>
   )
 }

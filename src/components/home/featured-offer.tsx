@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { QueryError } from '@/components/query-error'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFeaturedNfts } from '@/queries/catalog'
 
@@ -7,7 +8,8 @@ export function FeaturedOffer() {
   const featured = useFeaturedNfts()
   const items = featured.data?.items ?? []
   const offer = items.find((n) => n.editions.some((e) => e.compareAtPrice)) ?? items[0]
-  if (featured.isError || (featured.isSuccess && !offer)) return null
+  // Sem destaque na resposta não há oferta a mostrar; falha mostra erro com nova tentativa no lugar da arte.
+  if (featured.isSuccess && !offer) return null
   return (
     <section aria-labelledby="offer-title" className="grid gap-4 bg-linear-to-b from-primary/10 to-primary/[0.03] pt-6 pb-1">
       <div className="grid gap-4 px-5">
@@ -29,6 +31,10 @@ export function FeaturedOffer() {
             className="aspect-[310/368] w-full object-cover transition-transform duration-700 ease-[var(--ease-out-quint)] group-hover:scale-105"
           />
         </Link>
+      ) : featured.isError ? (
+        <div className="grid aspect-[310/368] w-full content-center rounded-[22px] bg-card p-3">
+          <QueryError error={featured.error} onRetry={() => void featured.refetch()} title="Não foi possível carregar o destaque" />
+        </div>
       ) : (
         <Skeleton className="aspect-[310/368] w-full rounded-[22px]" />
       )}
