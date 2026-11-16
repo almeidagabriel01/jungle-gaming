@@ -7,6 +7,7 @@ import type { Nft, NftList } from '@/contracts/nft'
 import type { Order } from '@/contracts/order'
 import { announce } from '@/lib/announcer'
 import { eth, formatEth } from '@/lib/money'
+import { submitOrderKey } from '@/queries/orders'
 import { ownerKey, sessionStore } from '@/session/store'
 
 /**
@@ -68,6 +69,24 @@ const patchNft = (nft: Nft, event: NftUpdatedEvent): Nft => {
   }
 }
 
+/**
+ * Unidades da edição reservadas pela própria sessão (pedidos pendentes no cache). `null` enquanto um
+ * pedido está sendo enviado: a reserva acontece no servidor antes da resposta, então qualquer queda
+ * de estoque nesse intervalo pode ser a do próprio comprador.
+ */
+function reservedByMe(qc: QueryClient, editionId: string): number | null {
+  const userId = sessionStore.userId()
+  if (!userId) return 0
+  if (qc.isMutating({ mutationKey: submitOrderKey(userId) }) > 0) return null
+  const pending = new Map<string, Order>()
+  for (const [, data] of qc.getQueriesData<Order | { items: Order[] }>({ queryKey: keys.orders(userId) })) {
+    for (const order of data && 'items' in data ? data.items : data ? [data] : []) if (order.status === 'pending') pending.set(order.id, order)
+  }
+  let reserved = 0
+  for (const order of pending.values()) for (const line of order.lines) if (line.editionId === editionId) reserved += line.quantity
+  return reserved
+}
+
 function applyNftUpdated(qc: QueryClient, event: NftUpdatedEvent) {
   qc.setQueryData<Nft>(keys.nft(event.payload.nftId), (nft) => nft && patchNft(nft, event))
   qc.setQueriesData<NftList>({ queryKey: [...keys.nfts, 'list'] }, (list) => list && { ...list, items: list.items.map((n) => patchNft(n, event)) })
@@ -87,7 +106,9 @@ function applyNftUpdated(qc: QueryClient, event: NftUpdatedEvent) {
     if (!eth.eq(edition.price, item.unitPrice)) {
       announce(`O preço de ${item.name} (${item.editionName}) mudou de ${formatEth(item.unitPrice)} para ${formatEth(edition.price)}.`, { topic: 'cart' })
     }
-    if (edition.available < item.quantity) {
+    // A reserva do próprio pedido não é falta de estoque para quem está comprando.
+    const reserved = reservedByMe(qc, item.editionId)
+    if (reserved !== null && edition.available + reserved < item.quantity) {
       announce(
         edition.available === 0
           ? `${item.name} (${item.editionName}) esgotou.`

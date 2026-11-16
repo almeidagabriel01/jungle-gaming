@@ -48,11 +48,14 @@ export const orderAttempt = {
   },
 }
 
+/** Chave da mutation de envio: o tempo real a usa para saber que a sessão está reservando o carrinho. */
+export const submitOrderKey = (userId: string | undefined) => ['submit-order', userId] as const
+
 export function useSubmitOrder() {
   const qc = useQueryClient()
   const userId = useUser()?.id
   return useMutation({
-    mutationKey: ['submit-order', userId],
+    mutationKey: submitOrderKey(userId),
     mutationFn: (attempt: OrderAttempt) => api.orders.create(attempt.body, attempt.key),
     onSuccess: (order: Order) => {
       if (!userId) return

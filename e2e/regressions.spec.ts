@@ -1,5 +1,6 @@
 import type { MockControl } from '../src/mocks/browser'
-import { expect, test } from './fixtures'
+import type { Page } from '@playwright/test'
+import { expect, test, USERS } from './fixtures'
 
 /** Regressões de borda (tempo real, checkout, recibo, contrato REST). */
 
@@ -22,4 +23,28 @@ test('reset do servidor sem reload: eventos novos voltam a ser aplicados', async
   await expect(page.getByTestId('realtime-status')).toHaveText('Tempo real: conectado')
   await mock.server(setPrice, '1.23456789')
   await expect(price).toContainText('1.23456789')
+})
+
+/** Do carrinho da Ana até o pedido criado (carteira principal, dados do perfil). */
+async function buyCart(page: Page) {
+  await page.goto('/cart')
+  await page.getByRole('link', { name: 'Conectar e finalizar' }).click()
+  await page.getByRole('button', { name: 'Conectar carteira' }).click()
+  await expect(page.getByTestId('wallet-connection')).toHaveText(/Carteira conectada/)
+  await page.getByRole('button', { name: 'Revisar pedido' }).click()
+  await page.getByRole('button', { name: /Confirmar compra/ }).click()
+  await expect(page).toHaveURL(/\/orders\/ord_/)
+}
+
+test('comprar a última unidade não avisa "esgotou" para o próprio comprador', async ({ page, mock }) => {
+  await mock.open('/')
+  // Quantidade no carrinho igual ao disponível: a reserva do pedido zera a edição.
+  await mock.server((m) => m.updateEdition('nft_001', 'nft_001_ed3', { available: 2 }))
+  await mock.login(USERS.ana)
+  await buyCart(page)
+  // Reserva feita e evento entregue (a página do pedido já mostra o estoque reduzido no servidor).
+  await expect.poll(() => mock.server((m) => m.recentEvents().some((e) => e.type === 'nft.updated' && e.resource.id === 'nft_001'))).toBe(true)
+  await mock.server((m) => m.settleNow())
+  await expect(page.getByTestId('order-view')).toHaveAttribute('data-status', 'confirmed')
+  await expect(page.getByText(/esgotou|agora tem só/)).toHaveCount(0)
 })
