@@ -590,7 +590,8 @@ function ReviewStep({
             setRevalidating(true)
             void quote.refetch().then((res) => {
               setRevalidating(false)
-              if (res.data && res.data.fingerprint === accepted.fingerprint) onConfirm(res.data)
+              // Revalidação que falhou mantém o `data` anterior: nunca confirmar com ele.
+              if (res.isSuccess && res.data.fingerprint === accepted.fingerprint) onConfirm(res.data)
             })
           }}
         >
