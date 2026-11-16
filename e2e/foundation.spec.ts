@@ -2,6 +2,10 @@ import { expect, test, USERS } from './fixtures'
 
 test.describe('pedido idempotente', () => {
   test('timeout após criar o pedido: reenvio recupera o mesmo pedido, sem duplicar', async ({ page, mock }) => {
+    // Tempo do cenário, não `page.clock`: o timeout de 10 s do cliente é o `xhr.timeout` nativo do Axios
+    // (adapter xhr, src/api/client.ts), um timer do navegador fora do relógio falso. Já o atraso de 30 s
+    // da resposta (MSW `delay`) roda no relógio da página: avançá-lo entregaria a resposta antes do
+    // timeout e o cenário deixaria de existir. Por isso o teste espera o timeout real do cliente.
     test.setTimeout(90_000)
     await mock.open('/', 'order-timeout')
     await mock.login(USERS.ana)
