@@ -26,7 +26,7 @@ const SIZES = {
   cart: {
     group: 'gap-2 md:gap-3',
     button:
-      'size-6 border-border bg-raised text-foreground disabled:text-border-soft md:h-[30px] md:w-5 md:border-background md:bg-primary md:text-primary-foreground md:shadow-[0_4px_12px_-2px_rgb(20_13_10/0.15)] md:disabled:text-primary-foreground [&_svg]:size-[9px]',
+      'size-6 border-border bg-raised text-foreground aria-disabled:text-border-soft md:h-[30px] md:w-5 md:border-background md:bg-primary md:text-primary-foreground md:shadow-[0_4px_12px_-2px_rgb(20_13_10/0.15)] md:aria-disabled:text-primary-foreground [&_svg]:size-[9px]',
     value: 'text-[17px] leading-6',
   },
 } as const
@@ -55,18 +55,19 @@ export function QuantityStepper({
 }) {
   const s = SIZES[size]
   const button = cn(
-    'grid shrink-0 cursor-pointer place-items-center rounded-full border border-background bg-primary text-primary-foreground transition-[transform,background-color] hover:brightness-110 active:scale-90 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:active:scale-100',
+    'grid shrink-0 cursor-pointer place-items-center rounded-full border border-background bg-primary text-primary-foreground transition-[transform,background-color] hover:brightness-110 active:scale-90 aria-disabled:cursor-not-allowed aria-disabled:hover:brightness-100 aria-disabled:active:scale-100',
     s.button,
   )
   return (
     <div role="group" aria-label={label} className={cn('inline-flex items-center', s.group)}>
-      <button type="button" className={button} aria-label="Diminuir quantidade" disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
+      {/* aria-disabled (não disabled): o botão continua focável, então o foco do teclado não cai no body enquanto a alteração é enviada ou no limite. */}
+      <button type="button" className={button} aria-label="Diminuir quantidade" aria-disabled={disabled || value <= min} onClick={() => !(disabled || value <= min) && onChange(value - 1)}>
         <Minus />
       </button>
       <output aria-live="polite" className={cn('min-w-[11px] text-center tabular-nums', s.value)}>
         {value}
       </output>
-      <button type="button" className={button} aria-label="Aumentar quantidade" disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
+      <button type="button" className={button} aria-label="Aumentar quantidade" aria-disabled={disabled || value >= max} onClick={() => !(disabled || value >= max) && onChange(value + 1)}>
         <Plus />
       </button>
     </div>
