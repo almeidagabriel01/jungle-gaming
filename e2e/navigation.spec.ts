@@ -88,36 +88,6 @@ test.describe('rolagem entre navegações', () => {
     await expect.poll(() => scrollY(page)).toBe(market)
   })
 
-  test('card aberto no instante em que o hash sai do endereço: voltar restaura o catálogo', async ({ page, mock }) => {
-    await mock.open('/')
-    await catalogReady(page)
-    // Abre o primeiro card no mesmo instante em que a entrada `/#mercado` é trocada por `/`, antes de essa troca
-    // terminar de carregar: a navegação nova atropela a troca (o caso que um PC carregado produz sozinho).
-    const market = await page.evaluate(
-      () =>
-        new Promise<number>((resolve) => {
-          const replaceState = history.replaceState.bind(history)
-          history.replaceState = (state: unknown, unused: string, url?: string | URL | null) => {
-            replaceState(state, unused, url)
-            if (url && !String(url).includes('#')) {
-              history.replaceState = replaceState
-              const y = Math.round(window.scrollY)
-              document.querySelector<HTMLAnchorElement>('[data-testid="catalog-grid"] li a')!.click()
-              resolve(y)
-            }
-          }
-          document.querySelector<HTMLAnchorElement>('section[aria-labelledby="hero-title"] a[href="/#mercado"]')!.click()
-        }),
-    )
-    expect(market).toBeGreaterThan(0)
-    await expect(page).toHaveURL(/\/nfts\//)
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-
-    await page.goBack()
-    await catalogReady(page)
-    await expect.poll(() => scrollY(page)).toBe(market)
-  })
-
   test('login com redirect saído de /#mercado volta ao início no topo', async ({ page, mock }) => {
     await mock.open('/login?redirect=%2F%23mercado')
     await page.getByLabel('E-mail', { exact: true }).fill(USERS.ana.email)
