@@ -47,7 +47,7 @@ const insufficient = (available: number) =>
 
 type CouponCheck = { ok: true; coupon: { code: string; percentOff: number } | null } | { ok: false; response: Response }
 
-function checkCoupon(code: string | undefined, now: number): CouponCheck {
+export function checkCoupon(code: string | undefined, now: number): CouponCheck {
   if (!code) return { ok: true, coupon: null }
   const coupon = COUPONS[code]
   if (!coupon) return { ok: false, response: apiError(422, 'COUPON_INVALID', 'Cupom inválido', { fields: { couponCode: 'Cupom não encontrado' } }) }

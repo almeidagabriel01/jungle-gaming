@@ -48,3 +48,31 @@ test('comprar a última unidade não avisa "esgotou" para o próprio comprador',
   await expect(page.getByTestId('order-view')).toHaveAttribute('data-status', 'confirmed')
   await expect(page.getByText(/esgotou|agora tem só/)).toHaveCount(0)
 })
+
+test('POST /orders revalida o cupom aceito na cotação', async ({ page, mock }) => {
+  await mock.open('/')
+  await mock.login(USERS.ana)
+  const result = await page.evaluate(async () => {
+    const { tokens } = JSON.parse(localStorage.getItem('jungle-session:v1')!) as { tokens: { accessToken: string } }
+    const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${tokens.accessToken}` }
+    const quote = (await (await fetch('/api/quotes', { method: 'POST', headers, body: JSON.stringify({ network: 'ethereum', couponCode: 'JUNGLE10' }) })).json()) as {
+      id: string
+      fingerprint: string
+    }
+    // O cupom aceito deixa de valer no "servidor" depois da cotação.
+    const dbKey = Object.keys(localStorage).find((k) => k.startsWith('jungle-mock-db:'))!
+    const db = JSON.parse(localStorage.getItem(dbKey)!) as { quotes: { id: string; coupon: { code: string } | null }[] }
+    db.quotes.find((q) => q.id === quote.id)!.coupon!.code = 'EXPIRED5'
+    localStorage.setItem(dbKey, JSON.stringify(db))
+
+    const order = window.__mock!.snapshot().orders.find((o) => o.userId === 'usr_ana')!
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+      body: JSON.stringify({ quoteId: quote.id, fingerprint: quote.fingerprint, walletId: order.wallet.id, network: 'ethereum', buyer: order.buyer }),
+    })
+    return { status: res.status, body: (await res.json()) as { error: { code: string } } }
+  })
+  expect(result.status).toBe(422)
+  expect(result.body.error.code).toBe('COUPON_EXPIRED')
+})
